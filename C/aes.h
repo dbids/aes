@@ -8,12 +8,11 @@
 #include <stdint.h>
 #include <stddef.h>
 
-// --------- typedefs --------- 
-
 // --------- defs --------- 
 #define AES_BLOCKLEN 16 // Block length in bytes - AES is 128b block only
 #define Nb 4            // Block length in 32 bit words
 #define IV_LENGTH 96    // Only allow 96-bit IVs
+#define WSIZE 4         // Size of a word in bytes
 
 #define AES128 1
 //#define AES192 1
@@ -35,6 +34,8 @@
     #define Nr 10              // The number of rounds in AES Cipher.
 #endif
 
+// --------- typedefs ---------
+
 // --------- Functions --------- 
 
 // ------------------------------------------ AES Top ------------------------------------------ 
@@ -47,9 +48,9 @@ int aes (
 );
 
 // ------------------------------------------ Key Expansion ------------------------------------------
-int keyExpansion(const uint32_t* key, uint8_t* round_keys);
-uint32_t rotWord (uint8_t* word_in);
-uint32_t subWord (uint8_t* word_in);
+int keyExpansion(const uint8_t* key, uint8_t* round_keys);
+void rotWord (uint8_t word_in[WSIZE]);
+void subWord (uint8_t word_in[WSIZE]);
 
 // ------------------------------------------ Cipher ------------------------------------------
 uint8_t subBytes(uint8_t byte_in);
