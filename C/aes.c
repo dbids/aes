@@ -4,21 +4,14 @@
 #include <aes.h>
 
 // ------------------------------------------ AES Top ------------------------------------------ 
-int aes (const uint8_t* key, size_t key_len, const uint8_t* iv, uint8_t* data, size_t data_len)
+int aes(const uint8_t* key, const uint8_t* iv, uint8_t* data, size_t data_len)
 {
   // Check inputs
-  if (!(key_len == 16 | key_len == 24 | key_len == 32)) {
-    return -1; // key length not 16B, 24B, or 32B
-  }
   if (data_len % AES_BLOCKLEN) {
     return -1; // data length not a multiple of AES_BLOCKLEN
   }
 
   // Setup state
-  int num_rounds =  (key_len == 16) ? 10 : 
-                    (key_len == 24) ? 12 :
-                    14;
-
   uint8_t state [4][4];
   
 
@@ -30,29 +23,90 @@ int aes (const uint8_t* key, size_t key_len, const uint8_t* iv, uint8_t* data, s
 // ------------------------------------------ Key Expansion ------------------------------------------ 
 // Key is expanded using the AES key schedule into round+1 keys
 // See FIPS PUB 197 Section 5.2
-// int KeyExpansion()
-// {
-//   // Round constant, left fixed though could be computed
-//   static const uint8_t rcon[4][10]= {
-//     {0x01, 0x00, 0x00, 0x00}, 
-//     {0x02, 0x00, 0x00, 0x00}, 
-//     {0x04, 0x00, 0x00, 0x00},
-//     {0x08, 0x00, 0x00, 0x00},
-//     {0x10, 0x00, 0x00, 0x00},
-//     {0x20, 0x00, 0x00, 0x00},
-//     {0x40, 0x00, 0x00, 0x00},
-//     {0x80, 0x00, 0x00, 0x00},
-//     {0x1B, 0x00, 0x00, 0x00},
-//     {0x36, 0x00, 0x00, 0x00}
-//   };
-// }
+int keyExpansion(const uint32_t* key, uint8_t* round_keys)
+{
+  // Round constant, left fixed though could be computed
+  static const uint32_t Rcon[10]= {
+    0x01000000, 
+    0x02000000, 
+    0x04000000,
+    0x08000000,
+    0x10000000,
+    0x20000000,
+    0x40000000,
+    0x80000000,
+    0x1B000000,
+    0x36000000
+  };
+
+  // Words of the key expansion output
+  uint32_t w[4*(Nr+1)];
+
+  // First Nk words are generated from the key itself
+  for (int i = 0; i < Nk; i++)
+  {
+    w[i] = key[i];
+  }
+
+  // Every subsequent word w[i] is generated recursively from the
+  // preceding word, w[i−1], and the word Nk positions earlier, w[i−Nk] as follows
+  // • If i is a multiple of Nk, then w[i] = w[i−Nk] ⊕ subWord(rotWord(w[i−1])) ⊕ Rcon[i/Nk].
+  // • For AES-256, if i + 4 is a multiple of 8, then w[i] = w[i−Nk] ⊕ subWord(w[i−1]).
+  // • For all other cases, w[i] = w[i−Nk] ⊕ w[i−1].
+  for (int i = Nk; i < (4*(Nr+1)); i++)
+  {
+    if (i % Nk == 0)
+    {
+      w[i] = (w[i-Nk]) ^ (subWord(rotWord(w[i-1]))) ^ (Rcon[i/Nk]);
+    }
+    #if defined(AES256) && (AES256 == 1)
+    elif ((i+4) % 8 == 0)
+    {
+      w[i] = w[i-Nk] ^ subWord(w[i-1]);
+    }
+    #endif
+    else
+    {
+      w[i] = w[i-Nk] ^ w[i-1];
+    }
+  }
+
+  // Move from words to round keys
+  round_keys = w;
+
+  return 0;
+}
+
+// ROTWORD for key expansion
+// [a0, a1, a2, a3] --> [a1, a2, a3, a0]
+void rotWord (uint8_t word_in[4])
+{
+  uint8_t temp_byte = word_in[0];
+  for (int i = 0; i < 3; i++)
+  {
+    word_in[i] = word_in[i+1];
+  }
+  word_in[3] = temp_byte;
+  return;
+}
+
+// SUBWORD for key expansion
+// Takes the SBox of all of the elements of the word
+uint32_t subWord (uint8_t* word_in)
+{
+  for (int i = 0; i < 3; i++)
+  {
+    word_in[i] = sBox(word_in[i]);
+  }
+  return (uint32_t) *word_in;
+}
 
 // ------------------------------------------ Cipher ------------------------------------------ 
-// SubBytes()
+// subBytes()
 // Equivalent to an SBox lookup
-uint8_t SubBytes(uint8_t byte_in)
+uint8_t subBytes(uint8_t byte_in)
 {
-  return SBox(byte_in);
+  return sBox(byte_in);
 }
 
 
@@ -84,7 +138,7 @@ static const uint8_t sbox[256] = {
   0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf, // E
   0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16  // F
 };
-uint8_t SBox(uint8_t byte_in)
+uint8_t sBox(uint8_t byte_in)
 {
   return sbox[byte_in];
 }
