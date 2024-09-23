@@ -7,6 +7,7 @@
 // --------- libraries --------- 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdio.h>
 
 // --------- defs --------- 
 #define AES_BLOCKLEN 16 // Block length in bytes - AES is 128b block only
@@ -48,7 +49,7 @@ int aes (
 );
 
 // ------------------------------------------ Key Expansion ------------------------------------------
-int keyExpansion(const uint8_t* key, uint8_t* round_keys);
+int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE]);
 void rotWord (uint8_t word_in[WSIZE]);
 void subWord (uint8_t word_in[WSIZE]);
 

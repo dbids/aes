@@ -23,10 +23,10 @@ int aes(const uint8_t* key, const uint8_t* iv, uint8_t* data, size_t data_len)
 // ------------------------------------------ Key Expansion ------------------------------------------ 
 // Key is expanded using the AES key schedule into round+1 keys
 // See FIPS PUB 197 Section 5.2
-int keyExpansion(const uint8_t* key, uint8_t* round_keys)
+int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE])
 {
   // Round constant, left fixed though could be computed
-  static const uint8_t Rcon[10][4]= {
+  static const uint8_t Rcon[10][WSIZE]= {
     {0x01, 0x00, 0x00, 0x00}, 
     {0x02, 0x00, 0x00, 0x00}, 
     {0x04, 0x00, 0x00, 0x00},
@@ -39,13 +39,15 @@ int keyExpansion(const uint8_t* key, uint8_t* round_keys)
     {0x36, 0x00, 0x00, 0x00}
   };
 
-  // Words of the key expansion output
-  uint8_t w[4*(Nr+1)][WSIZE];
-
   // First Nk words are generated from the key itself
-  for (int i = 0; i < (Nk*WSIZE); i++)
+  for (int i = 0; i < Nk; i++)
   {
-    w[i/WSIZE][i%WSIZE] = key[i];
+    for (int b_idx = 0; b_idx < WSIZE; b_idx++)
+    {
+      //printf("key[(i*WSIZE) + b_idx] \t %x\n", key[(i*WSIZE) + b_idx]);
+      w[i][b_idx] = key[(i*WSIZE) + b_idx];
+      //printf("w[i][b_idx] \t %x\n", w[i][b_idx]);
+    }
   }
 
   // Every subsequent word w[i] is generated recursively from the
@@ -60,26 +62,35 @@ int keyExpansion(const uint8_t* key, uint8_t* round_keys)
     {
       rotWord(sub_rot_word);
       subWord(sub_rot_word);
-      for (int w_idx = 0; w_idx < WSIZE; w_idx++)
-        w[i/WSIZE][i%WSIZE] = (w[i-Nk][i%WSIZE]) ^ (sub_rot_word[i%WSIZE]) ^ (Rcon[i/Nk][i%WSIZE]);
+      for (int b_idx = 0; b_idx < WSIZE; b_idx++)
+        w[i][b_idx] = (w[i-Nk][b_idx]) ^ (sub_rot_word[b_idx]) ^ (Rcon[i/Nk][b_idx]);
     }
     #if defined(AES256) && (AES256 == 1)
     elif ((i+4) % 8 == 0)
     {
       subWord(sub_rot_word);
-      for (int w_idx = 0; w_idx < WSIZE; w_idx++)
-        w[i/WSIZE][i%WSIZE] = (w[i-Nk][i%WSIZE]) ^ (sub_rot_word[i%WSIZE]);
+      for (int b_idx = 0; b_idx < WSIZE; b_idx++)
+        w[i][b_idx] = (w[i-Nk][b_idx]) ^ (sub_rot_word[b_idx]);
     }
     #endif
     else
     {
-      for (int w_idx = 0; w_idx < WSIZE; w_idx++)
-        w[i/WSIZE][i%WSIZE] = (w[i-Nk][i%WSIZE]) ^ (w[i-1][i%WSIZE]);
+      for (int b_idx = 0; b_idx < WSIZE; b_idx++)
+        w[i][b_idx] = (w[i-Nk][b_idx]) ^ (w[i-1][b_idx]);
     }
   }
 
-  // Convert words to round keys
-  round_keys = (uint8_t*) w;
+  // TEMP
+  printf("i\t\tw\n........\n");
+  for (int w_idx = 0; w_idx < (4*(Nr+1)); w_idx++)
+  {
+    printf("%d\t\t", w_idx);
+    for (int b_idx = 0; b_idx < WSIZE; b_idx++)
+    {
+      printf("%02x", w[w_idx][b_idx]);
+    }
+    printf("\n");
+  }
 
   return 0;
 }
