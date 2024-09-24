@@ -53,7 +53,11 @@ void rotWord (uint8_t word_in[WSIZE]);
 void subWord (uint8_t word_in[WSIZE]);
 
 // ------------------------------------------ Cipher ------------------------------------------
-uint8_t subBytes(uint8_t byte_in);
+int cipher(uint8_t state[4][Nb], uint8_t w[4*(Nr+1)][WSIZE]);
+void subBytes(uint8_t state[4][Nb]);
+void shiftRows(uint8_t state[4][Nb]); 
+void mixColumns(uint8_t state[4][Nb]); 
+void addRoundKey(uint8_t state[4][Nb], uint8_t fourW[4][WSIZE]); 
 
 
 // ------------------------------------------ Inverse Cipher ------------------------------------------ 

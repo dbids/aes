@@ -15,7 +15,7 @@ int aes(const uint8_t* key, const uint8_t* iv, uint8_t* data, size_t data_len)
   }
 
   // Setup state
-  uint8_t state [4][4];
+  uint8_t state [4][Nb];
   
 
 
@@ -45,9 +45,9 @@ int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE])
   // First Nk words are generated from the key itself
   for (int i = 0; i < Nk; i++)
   {
-    for (int b_idx = 0; b_idx < WSIZE; b_idx++)
+    for (int w_idx = 0; w_idx < WSIZE; w_idx++)
     {
-      w[i][b_idx] = key[(i*WSIZE) + b_idx];
+      w[i][w_idx] = key[(i*WSIZE) + w_idx];
     }
 //    printf("w[%d], ", i);
 //    printWord(w[i]);
@@ -64,8 +64,8 @@ int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE])
   for (int i = Nk; i < (4*(Nr+1)); i++)
   {
 //    printf("%d\t", i);
-    for (int b_idx = 0; b_idx < WSIZE; b_idx++)
-      sub_rot_word[b_idx] = w[i-1][b_idx];
+    for (int w_idx = 0; w_idx < WSIZE; w_idx++)
+      sub_rot_word[w_idx] = w[i-1][w_idx];
 //    printWord(sub_rot_word);
 //    printf("\t");
     if (i%Nk == 0)
@@ -79,40 +79,40 @@ int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE])
 //      printf("%d,", (i/Nk)-1);
 //      printWord(Rcon[(i/Nk)-1]);
 //      printf("\t");
-      for (int b_idx = 0; b_idx < WSIZE; b_idx++)
-        w[i][b_idx] = (sub_rot_word[b_idx]) ^ (Rcon[(i/Nk)-1][b_idx]);
+      for (int w_idx = 0; w_idx < WSIZE; w_idx++)
+        w[i][w_idx] = (sub_rot_word[w_idx]) ^ (Rcon[(i/Nk)-1][w_idx]);
 //      printWord(w[i]);
 //      printf("\t");
     }
-    else if ((Nk == 8) && (i%Nk == 4))
+    else if ((Nk > 6) && (i%Nk == 4))
     {
 //      printf("\t\t");
       subWord(sub_rot_word); 
 //      printWord(sub_rot_word);
 //      printf("\t\t\t\t\t");
-      for (int b_idx = 0; b_idx < WSIZE; b_idx++)
-        w[i][b_idx] = (sub_rot_word[b_idx]);
+      for (int w_idx = 0; w_idx < WSIZE; w_idx++)
+        w[i][w_idx] = (sub_rot_word[w_idx]);
     }
     else
     {
 //      printf("\t\t\t\t\t\t\t\t");
-      for (int b_idx = 0; b_idx < WSIZE; b_idx++)
-        w[i][b_idx] = (w[i-1][b_idx]);
+      for (int w_idx = 0; w_idx < WSIZE; w_idx++)
+        w[i][w_idx] = (w[i-1][w_idx]);
     }
 //    printWord(w[i-Nk]);
 //    printf("\t");
-    for (int b_idx = 0; b_idx < WSIZE; b_idx++)
-        w[i][b_idx] = (w[i-Nk][b_idx]) ^ (w[i][b_idx]);
+    for (int w_idx = 0; w_idx < WSIZE; w_idx++)
+        w[i][w_idx] = (w[i-Nk][w_idx]) ^ (w[i][w_idx]);
 //    printWord(w[i]);
 //    printf("\n");
   }
 
   // TEMP
   // printf("i\t\tw\n........\n");
-  // for (int w_idx = 0; w_idx < (4*(Nr+1)); w_idx++)
+  // for (int i = 0; i < (4*(Nr+1)); i++)
   // {
-  //   printf("%d\t\t", w_idx);
-  //   printWord(w[w_idx]);
+  //   printf("%d\t\t", i);
+  //   printWord(w[i]);
   //   printf("\n");
   // }
 
@@ -143,12 +143,74 @@ void subWord (uint8_t word_in[WSIZE])
   return;
 }
 
-// ------------------------------------------ Cipher ------------------------------------------ 
-// subBytes()
-// Equivalent to an SBox lookup
-uint8_t subBytes(uint8_t byte_in)
+// ------------------------------------------ Cipher ------------------------------------------
+// Forward Cipher (Encryption)
+// Takes in initial state and round keys... outputs final state by ref.
+int cipher(uint8_t state[4][Nb], uint8_t w[4*(Nr+1)][WSIZE])
 {
-  return sBox(byte_in);
+  // Setup four word to hold four words for round key function
+  uint8_t fourW[4][WSIZE]; 
+  for (int fw_idx = 0; fw_idx < 4; fw_idx++)
+    for (int w_idx = 0; w_idx < WSIZE; w_idx++)
+      fourW[fw_idx][w_idx] = w[fw_idx][w_idx];
+
+  addRoundKey(state, fourW);
+  for (int r = 1; r < Nr; r++)
+  {
+    subBytes(state);
+    shiftRows(state);
+    mixColumns(state);
+    for (int fw_idx = 0; fw_idx < 4; fw_idx++)
+      for (int w_idx = 0; w_idx < WSIZE; w_idx++)
+        fourW[fw_idx][w_idx] = w[(4*r) + fw_idx][w_idx];
+    addRoundKey(state, fourW);
+  }
+    subBytes(state);
+    shiftRows(state);
+    for (int fw_idx = 0; fw_idx < 4; fw_idx++)
+      for (int w_idx = 0; w_idx < WSIZE; w_idx++)
+        fourW[fw_idx][w_idx] = w[(4*Nr) + fw_idx][w_idx];
+    addRoundKey(state, fourW);
+
+  return 0;
+}
+
+// SubBytes()
+// Equivalent to an SBox lookup of every byte in the state
+void subBytes(uint8_t state[4][Nb])
+{
+  printf("subBytes\n");
+  return;
+}
+
+// ShiftRows()
+// TODO
+void shiftRows(uint8_t state[4][Nb]) 
+{
+  printf("shiftRows\n");
+  return;
+}
+
+// MixColumns()
+// TODO
+void mixColumns(uint8_t state[4][Nb]) 
+{
+  printf("mixColumns\n");
+  return;
+}
+
+// AddRoundKey()
+// TODO
+void addRoundKey(uint8_t state[4][Nb], uint8_t fourW[4][WSIZE]) 
+{
+  printf("addRoundKey\t");
+  for (int fw_idx = 0; fw_idx < 4; fw_idx++)
+  {
+    printWord(fourW[fw_idx]);
+    printf("\t");
+  }
+  printf("\n");
+  return;
 }
 
 

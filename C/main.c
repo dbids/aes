@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
   }
 
   // --- MAIN AES TEST ---
-  if (argv[1] == 0)
+  if (*argv[1] == '0')
   {
     printf("\n........\nMain AES Test\n........\n");
     // Define sample test case variables
@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
   }
 
   // --- AES Key Expansion test ---
-  else
+  else if(*argv[1] == '1')
   {
     #if defined(AES128) && (AES128 == 1)
     printf("###################\n128 bit AES Key Expansion Test\n###################\n");
@@ -57,24 +57,64 @@ int main(int argc, char *argv[]) {
     #endif
 
     uint8_t round_keys[4*(Nr+1)][WSIZE];
-    int rc = keyExpansion(key_in, round_keys);
-    if (rc == -1)
+    if (keyExpansion(key_in, round_keys) == -1)
     {
       printf("Function Failed!!");
       return -1;
     }
 
-   for (int r = 0; r < Nr+1; r++)
-   {
-     printf("round: %d,\t roundKey: ", r);
-     for (int kl = 0; kl < AES_KEYLEN/WSIZE; kl++) 
-     {
-      for (int b_idx = 0; b_idx < WSIZE; b_idx++)
+    for (int r = 0; r < Nr+1; r++)
+    {
+      printf("round: %d,\t roundKey: ", r);
+      for (int kl = 0; kl < AES_KEYLEN/WSIZE; kl++) 
       {
-        printf("%02x", round_keys[(4*r)+kl][b_idx]);
+        for (int b_idx = 0; b_idx < WSIZE; b_idx++)
+        {
+          printf("%02x", round_keys[(4*r)+kl][b_idx]);
+        }
       }
-     }
-     printf("\n");
-   }
+      printf("\n");
+    }
+  }
+
+  // --- AES Cipher test ---
+  else if(*argv[1] == '2')
+  {
+    #if defined(AES128) && (AES128 == 1)
+    printf("###################\n128b Key Cipher Test\n###################\n");
+    uint8_t in[4][Nb] = {{0x32, 0x43, 0xf6, 0xa8}, {0x88, 0x5a, 0x30, 0x8d}, {0x31, 0x31, 0x98, 0xa2}, {0xe0, 0x37, 0x07, 0x34}};
+    uint8_t key_in[AES_KEYLEN] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
+    uint8_t round_keys[4*(Nr+1)][WSIZE];
+    
+    printf("---------------------Check key expansion---------------------\n");
+    if (keyExpansion(key_in, round_keys) == -1)
+    {
+      printf("Function Failed!!");
+      return -1;
+    }
+    for (int r = 0; r < Nr+1; r++)
+    {
+      printf("round: %d,\t roundKey: ", r);
+      for (int kl = 0; kl < AES_KEYLEN/WSIZE; kl++) 
+      {
+        for (int b_idx = 0; b_idx < WSIZE; b_idx++)
+        {
+          printf("%02x", round_keys[(4*r)+kl][b_idx]);
+        }
+      }
+      printf("\n");
+    }
+    printf("---------------------\n");
+    
+    if (cipher(in, round_keys) == -1)
+    {
+      printf("Function Failed!!");
+      return -1;
+    }
+    #else
+    printf("Cipher test only works with 128b keys\n");
+    #endif
+
+
   }
 }
