@@ -1,4 +1,6 @@
 
 .vscode/settings.json
 C/test
-C/*.o
+*.o
+bin
+obj
