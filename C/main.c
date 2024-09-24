@@ -2,7 +2,8 @@
 // Created : 9/22/24
 
 #include <stdio.h>
-#include <aes.h>
+#include "aes.h"
+#include "debug.h"
 
 #define TEST_NUM = 0
 
@@ -45,7 +46,7 @@ int main(int argc, char *argv[]) {
     #if defined(AES256) && (AES256 == 1)
     #elif defined(AES192) && (AES192 == 1)
     #else
-    printf("\n........\n128 bit AES Key Expansion Test\n........\n");
+    printf("###################\n128 bit AES Key Expansion Test\n###################\n");
     uint8_t key_in[AES_KEYLEN] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
     uint8_t round_keys[4*(Nr+1)][WSIZE];
     int rc = keyExpansion(key_in, round_keys);
@@ -54,27 +55,19 @@ int main(int argc, char *argv[]) {
       printf("Function Failed!!");
       return -1;
     }
-  
-    printf("i\t\tw\n........\n");
-    for (int w_idx = 0; w_idx < (4*(Nr+1)); w_idx++)
-    {
-      printf("%d\t\t", w_idx);
+
+   for (int r = 0; r < Nr+1; r++)
+   {
+     printf("round: %d,\t roundKey: ", r);
+     for (int kl = 0; kl < AES_KEYLEN/WSIZE; kl++) 
+     {
       for (int b_idx = 0; b_idx < WSIZE; b_idx++)
       {
-        printf("%x", round_keys[w_idx][b_idx]);
+        printf("%02x", round_keys[(4*r)+kl][b_idx]);
       }
-      printf("\n");
-    }
-
-//    for (int r = 0; r < Nr; r++)
-//    {
-//      printf("round : %d\t, roundKey :", r);
-//      for (int kl = 0; kl < AES_KEYLEN; kl++) 
-//      {
-//        printf("%x", round_keys[(Nr*r) + kl]);
-//      }
-//      printf("\n");
-//    }
+     }
+     printf("\n");
+   }
     #endif
   }
 }

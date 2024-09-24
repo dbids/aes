@@ -2,6 +2,8 @@
   "C_Cpp.default.compilerPath": "C:\\cygwin64\\bin\\gcc.exe",
   "files.associations": {
     "stdint.h": "c",
-    "stddef.h": "c"
+    "stddef.h": "c",
+    "aes.h": "c",
+    "stdio.h": "c"
   }
 }

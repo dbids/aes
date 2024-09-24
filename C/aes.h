@@ -7,7 +7,6 @@
 // --------- libraries --------- 
 #include <stdint.h>
 #include <stddef.h>
-#include <stdio.h>
 
 // --------- defs --------- 
 #define AES_BLOCKLEN 16 // Block length in bytes - AES is 128b block only

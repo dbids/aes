@@ -1,9 +1,12 @@
 // Devin Bidstrup
 // Created : 9/22/24
 
-#include <aes.h>
+#include <stdio.h>
+#include "aes.h"
+#include "debug.h"
 
-// ------------------------------------------ AES Top ------------------------------------------ 
+// ------------------------------------------ AES Top ------------------------------------------
+// TODO
 int aes(const uint8_t* key, const uint8_t* iv, uint8_t* data, size_t data_len)
 {
   // Check inputs
@@ -44,10 +47,11 @@ int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE])
   {
     for (int b_idx = 0; b_idx < WSIZE; b_idx++)
     {
-      //printf("key[(i*WSIZE) + b_idx] \t %x\n", key[(i*WSIZE) + b_idx]);
       w[i][b_idx] = key[(i*WSIZE) + b_idx];
-      //printf("w[i][b_idx] \t %x\n", w[i][b_idx]);
     }
+    printf("w[%d], ", i);
+    printWord(w[i]);
+    printf("\n");
   }
 
   // Every subsequent word w[i] is generated recursively from the
@@ -55,42 +59,61 @@ int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE])
   // • If i is a multiple of Nk, then w[i] = w[i−Nk] ⊕ subWord(rotWord(w[i−1])) ⊕ Rcon[i/Nk].
   // • For AES-256, if i + 4 is a multiple of 8, then w[i] = w[i−Nk] ⊕ subWord(w[i−1]).
   // • For all other cases, w[i] = w[i−Nk] ⊕ w[i−1].
+  uint8_t sub_rot_word [WSIZE];
+  printf("i\ttemp\t\tAf Rw\t\tAf Sw\t\tRcon\t\tAf XOR\t\tw[i-Nk]\t\tw[i]\n........\n");
   for (int i = Nk; i < (4*(Nr+1)); i++)
   {
-    uint8_t sub_rot_word [WSIZE] = {w[i-1][0], w[i-1][1], w[i-1][2], w[i-1][3]};
+    printf("%d\t", i);
+    for (int b_idx = 0; b_idx < WSIZE; b_idx++)
+      sub_rot_word[b_idx] = w[i-1][b_idx];
+    printWord(sub_rot_word);
+    printf("\t");
     if (i % Nk == 0)
     {
       rotWord(sub_rot_word);
+      printWord(sub_rot_word);
+      printf("\t");
       subWord(sub_rot_word);
+      printWord(sub_rot_word);
+      printf("\t");
+      printf("%d,", (i/Nk)-1);
+      printWord(Rcon[(i/Nk)-1]);
+      printf("\t");
       for (int b_idx = 0; b_idx < WSIZE; b_idx++)
-        w[i][b_idx] = (w[i-Nk][b_idx]) ^ (sub_rot_word[b_idx]) ^ (Rcon[i/Nk][b_idx]);
+        w[i][b_idx] = (sub_rot_word[b_idx]) ^ (Rcon[(i/Nk)-1][b_idx]);
+      printWord(w[i]);
+      printf("\t");
     }
     #if defined(AES256) && (AES256 == 1)
     elif ((i+4) % 8 == 0)
     {
       subWord(sub_rot_word);
       for (int b_idx = 0; b_idx < WSIZE; b_idx++)
-        w[i][b_idx] = (w[i-Nk][b_idx]) ^ (sub_rot_word[b_idx]);
+        w[i][b_idx] = (sub_rot_word[b_idx]);
     }
     #endif
     else
     {
+      printf("\t\t\t\t\t\t\t\t");
       for (int b_idx = 0; b_idx < WSIZE; b_idx++)
-        w[i][b_idx] = (w[i-Nk][b_idx]) ^ (w[i-1][b_idx]);
+        w[i][b_idx] = (w[i-1][b_idx]);
     }
+    printWord(w[i-Nk]);
+    printf("\t");
+    for (int b_idx = 0; b_idx < WSIZE; b_idx++)
+        w[i][b_idx] = (w[i-Nk][b_idx]) ^ (w[i][b_idx]);
+    printWord(w[i]);
+    printf("\n");
   }
 
   // TEMP
-  printf("i\t\tw\n........\n");
-  for (int w_idx = 0; w_idx < (4*(Nr+1)); w_idx++)
-  {
-    printf("%d\t\t", w_idx);
-    for (int b_idx = 0; b_idx < WSIZE; b_idx++)
-    {
-      printf("%02x", w[w_idx][b_idx]);
-    }
-    printf("\n");
-  }
+  // printf("i\t\tw\n........\n");
+  // for (int w_idx = 0; w_idx < (4*(Nr+1)); w_idx++)
+  // {
+  //   printf("%d\t\t", w_idx);
+  //   printWord(w[w_idx]);
+  //   printf("\n");
+  // }
 
   return 0;
 }
@@ -112,7 +135,7 @@ void rotWord (uint8_t word_in[WSIZE])
 // Takes the SBox of all of the elements of the word
 void subWord (uint8_t word_in[WSIZE])
 {
-  for (int i = 0; i < 3; i++)
+  for (int i = 0; i < 4; i++)
   {
     word_in[i] = sBox(word_in[i]);
   }
