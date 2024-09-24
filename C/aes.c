@@ -49,9 +49,9 @@ int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE])
     {
       w[i][b_idx] = key[(i*WSIZE) + b_idx];
     }
-    printf("w[%d], ", i);
-    printWord(w[i]);
-    printf("\n");
+//    printf("w[%d], ", i);
+//    printWord(w[i]);
+//    printf("\n");
   }
 
   // Every subsequent word w[i] is generated recursively from the
@@ -60,51 +60,51 @@ int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE])
   // • For AES-256, if i + 4 is a multiple of 8, then w[i] = w[i−Nk] ⊕ subWord(w[i−1]).
   // • For all other cases, w[i] = w[i−Nk] ⊕ w[i−1].
   uint8_t sub_rot_word [WSIZE];
-  printf("i\ttemp\t\tAf Rw\t\tAf Sw\t\tRcon\t\tAf XOR\t\tw[i-Nk]\t\tw[i]\n........\n");
+//  printf("i\ttemp\t\tAf Rw\t\tAf Sw\t\tRcon\t\tAf XOR\t\tw[i-Nk]\t\tw[i]\n........\n");
   for (int i = Nk; i < (4*(Nr+1)); i++)
   {
-    printf("%d\t", i);
+//    printf("%d\t", i);
     for (int b_idx = 0; b_idx < WSIZE; b_idx++)
       sub_rot_word[b_idx] = w[i-1][b_idx];
-    printWord(sub_rot_word);
-    printf("\t");
+//    printWord(sub_rot_word);
+//    printf("\t");
     if (i%Nk == 0)
     {
       rotWord(sub_rot_word);
-      printWord(sub_rot_word);
-      printf("\t");
+//      printWord(sub_rot_word);
+//      printf("\t");
       subWord(sub_rot_word);
-      printWord(sub_rot_word);
-      printf("\t");
-      printf("%d,", (i/Nk)-1);
-      printWord(Rcon[(i/Nk)-1]);
-      printf("\t");
+//      printWord(sub_rot_word);
+//      printf("\t");
+//      printf("%d,", (i/Nk)-1);
+//      printWord(Rcon[(i/Nk)-1]);
+//      printf("\t");
       for (int b_idx = 0; b_idx < WSIZE; b_idx++)
         w[i][b_idx] = (sub_rot_word[b_idx]) ^ (Rcon[(i/Nk)-1][b_idx]);
-      printWord(w[i]);
-      printf("\t");
+//      printWord(w[i]);
+//      printf("\t");
     }
     else if ((Nk == 8) && (i%Nk == 4))
     {
-      printf("\t\t");
+//      printf("\t\t");
       subWord(sub_rot_word); 
-      printWord(sub_rot_word);
-      printf("\t\t\t\t\t");
+//      printWord(sub_rot_word);
+//      printf("\t\t\t\t\t");
       for (int b_idx = 0; b_idx < WSIZE; b_idx++)
         w[i][b_idx] = (sub_rot_word[b_idx]);
     }
     else
     {
-      printf("\t\t\t\t\t\t\t\t");
+//      printf("\t\t\t\t\t\t\t\t");
       for (int b_idx = 0; b_idx < WSIZE; b_idx++)
         w[i][b_idx] = (w[i-1][b_idx]);
     }
-    printWord(w[i-Nk]);
-    printf("\t");
+//    printWord(w[i-Nk]);
+//    printf("\t");
     for (int b_idx = 0; b_idx < WSIZE; b_idx++)
         w[i][b_idx] = (w[i-Nk][b_idx]) ^ (w[i][b_idx]);
-    printWord(w[i]);
-    printf("\n");
+//    printWord(w[i]);
+//    printf("\n");
   }
 
   // TEMP
