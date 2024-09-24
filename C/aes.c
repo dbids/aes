@@ -68,7 +68,7 @@ int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE])
       sub_rot_word[b_idx] = w[i-1][b_idx];
     printWord(sub_rot_word);
     printf("\t");
-    if (i % Nk == 0)
+    if (i%Nk == 0)
     {
       rotWord(sub_rot_word);
       printWord(sub_rot_word);
@@ -84,14 +84,15 @@ int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE])
       printWord(w[i]);
       printf("\t");
     }
-    #if defined(AES256) && (AES256 == 1)
-    else if ((i+4) % 8 == 0)
+    else if ((Nk == 8) && (i%Nk == 4))
     {
-      subWord(sub_rot_word);
+      printf("\t\t");
+      subWord(sub_rot_word); 
+      printWord(sub_rot_word);
+      printf("\t\t\t\t\t");
       for (int b_idx = 0; b_idx < WSIZE; b_idx++)
         w[i][b_idx] = (sub_rot_word[b_idx]);
     }
-    #endif
     else
     {
       printf("\t\t\t\t\t\t\t\t");
