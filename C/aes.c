@@ -85,7 +85,7 @@ int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE])
       printf("\t");
     }
     #if defined(AES256) && (AES256 == 1)
-    elif ((i+4) % 8 == 0)
+    else if ((i+4) % 8 == 0)
     {
       subWord(sub_rot_word);
       for (int b_idx = 0; b_idx < WSIZE; b_idx++)

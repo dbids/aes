@@ -14,9 +14,9 @@
 #define IV_LENGTH 96    // Only allow 96-bit IVs
 #define WSIZE 4         // Size of a word in bytes
 
-#define AES128 1
-//#define AES192 1
-// #define AES256 1
+// #define AES128 1
+// #define AES192 1
+#define AES256 1
 #if defined(AES256) && (AES256 == 1)
     #define AES_KEYLEN 32
     #define AES_keyExpSize 240
