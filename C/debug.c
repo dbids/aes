@@ -11,3 +11,15 @@ void printWord(uint8_t word_in[WSIZE])
     printf("%02x", word_in[b_idx]);
   }
 }
+
+void printState(uint8_t state_in[4][Nb])
+{
+  for (int row = 0; row < 4; row++)
+  {
+    for (int col = 0; col < Nb; col++)
+    {
+      printf("%02x ", state_in[row][col]);
+    }
+    printf("\n");
+  }
+}

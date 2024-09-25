@@ -114,7 +114,16 @@ int main(int argc, char *argv[]) {
     #else
     printf("Cipher test only works with 128b keys\n");
     #endif
+  }
 
-
+  // --- AES Cipher ShiftRows Test ---
+  else if(*argv[1] == '3')
+  {
+    uint8_t in_state[4][Nb] = {{0x00, 0x01, 0x02, 0x03}, {0x04, 0x05, 0x06, 0x07}, {0x08, 0x09, 0x0A, 0x0B}, {0x0C, 0x0D, 0x0E, 0x0F}};
+    printf("---------------------Before:---------------------\n");
+    printState(in_state);
+    shiftRows(in_state);
+    printf("---------------------After:---------------------\n");
+    printState(in_state);
   }
 }

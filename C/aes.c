@@ -179,15 +179,44 @@ int cipher(uint8_t state[4][Nb], uint8_t w[4*(Nr+1)][WSIZE])
 // Equivalent to an SBox lookup of every byte in the state
 void subBytes(uint8_t state[4][Nb])
 {
-  printf("subBytes\n");
+  printf("---------------subBytes-----------------\n");
+  printf("Before:\n");
+  printState(state);
+  for (int row = 0; row < 4; row++)
+  {
+    for (int col = 0; col < Nb; col++)
+    {
+      state[row][col] = sBox(state[row][col]);
+    }
+  }
+  printf("After:\n");
+  printState(state);
   return;
 }
 
 // ShiftRows()
-// TODO
+// Bytes in the last three rows of the state of cyclically shifted
 void shiftRows(uint8_t state[4][Nb]) 
 {
-  printf("shiftRows\n");
+  printf("--------------------shiftRows-------------------\n");
+  printf("Before:\n");
+  printState(state);
+  uint8_t temp_byte;
+  for (int row = 1; row < 4; row++)
+  {
+    // Shift start to end once in row 1, twice in row 2, and thrice in row 3
+    for (int shift_idx = 0; shift_idx < row; shift_idx++)
+    {
+      temp_byte = state[row][0];
+      for (int col = 0; col < Nb-1; col++)
+      {
+        state[row][col] = state[row][col+1];
+      }
+      state[row][Nb-1] = temp_byte;
+    }
+  }
+  printf("After:\n");
+  printState(state);
   return;
 }
 

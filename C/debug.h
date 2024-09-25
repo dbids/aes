@@ -7,5 +7,6 @@
 #include "aes.h"
 
 void printWord(uint8_t word_in[WSIZE]);
+void printState(uint8_t state_in[4][Nb]);
 
 #endif // _DEBUG_H_
