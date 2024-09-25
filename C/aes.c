@@ -148,29 +148,29 @@ void subWord (uint8_t word_in[WSIZE])
 // Takes in initial state and round keys... outputs final state by ref.
 int cipher(uint8_t state[4][Nb], uint8_t w[4*(Nr+1)][WSIZE])
 {
-  // Setup four word to hold four words for round key function
-  uint8_t fourW[4][WSIZE]; 
-  for (int fw_idx = 0; fw_idx < 4; fw_idx++)
+  // Setup four word variable to handle round key
+  uint8_t round_key[4][WSIZE]; 
+  for (int k_idx = 0; k_idx < 4; k_idx++)
     for (int w_idx = 0; w_idx < WSIZE; w_idx++)
-      fourW[fw_idx][w_idx] = w[fw_idx][w_idx];
+      round_key[k_idx][w_idx] = w[k_idx][w_idx];
 
-  addRoundKey(state, fourW);
+  addRoundKey(state, round_key);
   for (int r = 1; r < Nr; r++)
   {
     subBytes(state);
     shiftRows(state);
     mixColumns(state);
-    for (int fw_idx = 0; fw_idx < 4; fw_idx++)
+    for (int k_idx = 0; k_idx < 4; k_idx++)
       for (int w_idx = 0; w_idx < WSIZE; w_idx++)
-        fourW[fw_idx][w_idx] = w[(4*r) + fw_idx][w_idx];
-    addRoundKey(state, fourW);
+        round_key[k_idx][w_idx] = w[(4*r) + k_idx][w_idx];
+    addRoundKey(state, round_key);
   }
     subBytes(state);
     shiftRows(state);
-    for (int fw_idx = 0; fw_idx < 4; fw_idx++)
+    for (int k_idx = 0; k_idx < 4; k_idx++)
       for (int w_idx = 0; w_idx < WSIZE; w_idx++)
-        fourW[fw_idx][w_idx] = w[(4*Nr) + fw_idx][w_idx];
-    addRoundKey(state, fourW);
+        round_key[k_idx][w_idx] = w[(4*Nr) + k_idx][w_idx];
+    addRoundKey(state, round_key);
 
   return 0;
 }
@@ -221,24 +221,55 @@ void shiftRows(uint8_t state[4][Nb])
 }
 
 // MixColumns()
-// TODO
+// Multiplies each of the columns of the state by a fixed matrix
+// [s'_0c] = [02 03 01 01] [s_0c]
+// [s'_1c] = [01 02 03 01] [s_1c]
+// [s'_2c] = [01 01 02 03] [s_2c]
+// [s'_3c] = [03 01 01 02] [s_3c]
+// This is Galois Field Matrix Multiplication, so it expands to multiplication of all elements which are bitwise XORed together.
 void mixColumns(uint8_t state[4][Nb]) 
 {
-  printf("mixColumns\n");
+  printf("--------------------MixColumns-------------------\n");
+  printf("Before:\n");
+  printState(state);
+  uint8_t temp_col[4];
+  for (int col = 0; col < Nb-1; col++)
+  {
+    for (int row = 0; row < 4; row++)
+    {
+      temp_col[row] = state[row][col];
+    }
+    state[0][col] = (2*temp_col[0]) ^ (3*temp_col[1]) ^    temp_col[2]  ^    temp_col[3];
+    state[1][col] =     temp_col[0] ^ (2*temp_col[1]) ^ (3*temp_col[2]) ^    temp_col[3];
+    state[2][col] =     temp_col[0] ^    temp_col[1]  ^ (2*temp_col[2]) ^ (3*temp_col[3]);
+    state[3][col] = (3*temp_col[0]) ^    temp_col[1]  ^    temp_col[2]  ^ (2*temp_col[3]);
+  } 
+  printf("After:\n");
+  printState(state);
   return;
 }
 
 // AddRoundKey()
-// TODO
-void addRoundKey(uint8_t state[4][Nb], uint8_t fourW[4][WSIZE]) 
+// A Round Key is applied to the state by applying a bitwise XOR operation.
+// Each round key consists of four words, each of which is applied to a column of the state as follows:
+// [s'_0c, s'_1c, s'_2c, s'_3c] = [s_0c, s_1c, s_2c, s_3c] ⊕ [w_(4*round+c)]
+void addRoundKey(uint8_t state[4][Nb], uint8_t round_key[4][WSIZE]) 
 {
-  printf("addRoundKey\t");
-  for (int fw_idx = 0; fw_idx < 4; fw_idx++)
+  printf("--------------------addRoundKey--------------------\n");
+  printf("roundkey: ");
+  printState(roundKey);
+
+  printf("Before:\n");
+  printState(state);
+  for (int col = 0; col < 4; col++)
   {
-    printWord(fourW[fw_idx]);
-    printf("\t");
+    for (int row = 0; row < 4; row++)
+    {
+      state[row][col] = state[row][col] ^ round_key[row][col];
+    } 
   }
-  printf("\n");
+  printf("After:\n");
+  printState(state);
   return;
 }
 
