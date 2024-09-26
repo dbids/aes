@@ -226,23 +226,25 @@ void shiftRows(uint8_t state[4][Nb])
 // [s'_1c] = [01 02 03 01] [s_1c]
 // [s'_2c] = [01 01 02 03] [s_2c]
 // [s'_3c] = [03 01 01 02] [s_3c]
-// This is Galois Field Matrix Multiplication, so it expands to multiplication of all elements which are bitwise XORed together.
+// This is Galois Field Matrix Multiplication, so the result is non-obvious.
 void mixColumns(uint8_t state[4][Nb]) 
 {
   printf("--------------------MixColumns-------------------\n");
   printf("Before:\n");
   printState(state);
   uint8_t temp_col[4];
-  for (int col = 0; col < Nb-1; col++)
+  for (int col = 0; col < Nb; col++)
   {
+    // printf("col : %d\n", col);
     for (int row = 0; row < 4; row++)
     {
       temp_col[row] = state[row][col];
+      // printf("%02x\n", temp_col[row]);
     }
-    state[0][col] = (2*temp_col[0]) ^ (3*temp_col[1]) ^    temp_col[2]  ^    temp_col[3];
-    state[1][col] =     temp_col[0] ^ (2*temp_col[1]) ^ (3*temp_col[2]) ^    temp_col[3];
-    state[2][col] =     temp_col[0] ^    temp_col[1]  ^ (2*temp_col[2]) ^ (3*temp_col[3]);
-    state[3][col] = (3*temp_col[0]) ^    temp_col[1]  ^    temp_col[2]  ^ (2*temp_col[3]);
+    state[0][col] = gfMult(2,temp_col[0]) ^ gfMult(3,temp_col[1]) ^ temp_col[2]           ^ temp_col[3];
+    state[1][col] = temp_col[0]           ^ gfMult(2,temp_col[1]) ^ gfMult(3,temp_col[2]) ^ temp_col[3];
+    state[2][col] = temp_col[0]           ^ temp_col[1]           ^ gfMult(2,temp_col[2]) ^ gfMult(3,temp_col[3]);
+    state[3][col] = gfMult(3,temp_col[0]) ^ temp_col[1]           ^ temp_col[2]           ^ gfMult(2,temp_col[3]);
   } 
   printf("After:\n");
   printState(state);
@@ -256,8 +258,8 @@ void mixColumns(uint8_t state[4][Nb])
 void addRoundKey(uint8_t state[4][Nb], uint8_t round_key[4][WSIZE]) 
 {
   printf("--------------------addRoundKey--------------------\n");
-  printf("roundkey: ");
-  printState(roundKey);
+  printf("roundkey: \n");
+  printState(round_key);
 
   printf("Before:\n");
   printState(state);
@@ -306,3 +308,98 @@ uint8_t sBox(uint8_t byte_in)
 {
   return sbox[byte_in];
 }
+
+// GF Primer
+// The bytes in Galois Fields represent the coefficients of polynomials, for example 01010101b = x^6 + x^4 + x^2 + 1
+// Any operation on a GF, really operates on a polynomial, so special functions are required for the operations
+
+// GF Addition
+// The coefficients of the elements are added and then reduced modulo 2.
+//  (0+0)mod2 = 0
+//  (0+1)mod2 = 1
+//  (1+0)mod2 = 1
+//  (1+1)mod2 = 0
+// Resulting in the bitwise XOR of the bytes
+inline uint8_t gfAdd(uint8_t a, uint8_t b)
+{
+  return a ^ b;
+}
+
+// GF Mult or •
+// The bytes in Galois Fields represent the coefficients of polynomials, for example 01010101b = x^6 + x^4 + x^2 + 1
+// GF Mult of two bytes results in two steps
+// 1) The two polynomials are multiplied as polynomials (multiplication occurs and then coefficients are reduced modulo 2).
+// 2) The resulting polynomial is reduced modulo the following polynomial (x^8 + x^4 + x^3 + x + 1).
+// If one considers the case where the second polynomial, c, is x the following equation can be used to compute the result
+//   xTimes(b) = {{b6,b5,b4,b3,b2,b1,b0,0}                     if b7=0
+//               {{b6,b5,b4,b3,b2,b1,b0,0} ⊕ {0,0,0,1,1,0,1,1} if b7=1 
+// Then we can calculate any power of 2^n by repeating that function x times
+// Finally, we can use that to compute the multiplication of any number, by splitting that number into the gf addition of any bit set in the byte
+inline uint8_t xTimes(uint8_t b)
+{
+  return ((b >> 7) == 0x00) ? 
+         (b << 1) :
+         ((b << 1) ^ (0x1b));
+}
+uint8_t gfMult(uint8_t b, uint8_t c)
+{
+  uint8_t out = 0x00;
+
+  // Setup mask to extract the bit that we are working on
+  uint8_t temp_mask = 0x01;
+
+  // Setup byte to hold the result as we iterate xTimes
+  uint8_t temp_byte;
+
+  // Loop through every bit in c
+  for (int c_idx = 0; c_idx < 8; c_idx++)
+  {
+    // Check if that bit is set
+    if (c & temp_mask)
+    {
+      // printf("c_idx %02x\t", c_idx);
+      // Run xTimes based on the log of the current bit index that we are extracting
+      temp_byte = b;
+      for (int x = 0; x < c_idx; x++)
+      {
+        temp_byte = xTimes(temp_byte);
+      }
+      // printf("temp_byte: %02x\n", temp_byte);
+
+      // GF add the result to the output
+      out = gfAdd(out, temp_byte);
+    }
+
+    // Shift mask to grab next bit
+    temp_mask = temp_mask << 1;
+  }
+  return out;
+}
+
+// UNUSED
+// GF Matrix Mult with fixed matrix widths:
+// IN:
+// [d0] = [a00 a01 a02 a03] [b0]
+// [d1] = [a10 a11 a12 a13] [b1]
+// [d2] = [a20 a21 a22 a23] [b2]
+// [d3] = [a30 a31 a32 a33] [b3]
+// OUT:
+// d0 = (a00•b0)⊕(a01•b1)⊕(a02•b2)⊕(a03•b3)
+// d1 = (a10•b0)⊕(a11•b1)⊕(a12•b2)⊕(a13•b3)
+// d2 = (a20•b0)⊕(a21•b1)⊕(a22•b2)⊕(a23•b3)
+// d3 = (a30•b0)⊕(a31•b1)⊕(a32•b2)⊕(a33•b3)
+// where ⊕ is bitwise XOR and • is GF multiplication represented by the gfMult function. 
+// void gfFixedMatrixMult(uint8_t a[4][4], uint8_t b[4], uint8_t d[4])
+// {
+//   uint8_t temp_byte;
+//   for (int row = 0; row < 4; row++)
+//   {
+//     temp_byte = 0x00;
+//     for (int col = 0; col < 4; col++)
+//     {
+//       temp_byte = temp_byte ^ gfMult(a[row][col], b[col]);
+//     }
+//     d[row] = temp_byte;
+//   }
+//   return;
+// }

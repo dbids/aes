@@ -67,4 +67,9 @@ void addRoundKey(uint8_t state[4][Nb], uint8_t fourW[4][WSIZE]);
 // ------------------------------------------ Common Functions ------------------------------------------
 uint8_t sBox(uint8_t byte_in);
 
+uint8_t gfAdd(uint8_t a, uint8_t b);
+uint8_t xTimes(uint8_t b);
+uint8_t gfMult(uint8_t b, uint8_t c);
+// void gfFixedMatrixMult(uint8_t a[4][4], uint8_t b[4], uint8_t d[4]); UNUSED
+
 #endif // _AES_H_
