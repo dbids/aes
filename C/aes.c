@@ -259,7 +259,10 @@ void addRoundKey(uint8_t state[4][Nb], uint8_t round_key[4][WSIZE])
 {
   printf("--------------------addRoundKey--------------------\n");
   printf("roundkey: \n");
-  printState(round_key);
+  for (int r = 0; r < 4; r++)
+    for (int c = 0; c < 4; c++)
+      printf("%02x", round_key[r][c]);
+  printf("\n");
 
   printf("Before:\n");
   printState(state);
@@ -267,7 +270,7 @@ void addRoundKey(uint8_t state[4][Nb], uint8_t round_key[4][WSIZE])
   {
     for (int row = 0; row < 4; row++)
     {
-      state[row][col] = state[row][col] ^ round_key[row][col];
+      state[row][col] = state[row][col] ^ round_key[col][row];
     } 
   }
   printf("After:\n");
