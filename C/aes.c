@@ -3,7 +3,6 @@
 
 #include <stdio.h>
 #include "aes.h"
-#include "debug.h"
 
 // ------------------------------------------ AES Top ------------------------------------------
 // Takes in key, dervies round keys, and then either decrypts or encrypts
@@ -63,9 +62,6 @@ int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE])
     {
       w[i][w_idx] = key[(i*WSIZE) + w_idx];
     }
-//    printf("w[%d], ", i);
-//    printWord(w[i]);
-//    printf("\n");
   }
 
   // Every subsequent word w[i] is generated recursively from the
@@ -74,61 +70,31 @@ int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE])
   // • For AES-256, if i + 4 is a multiple of 8, then w[i] = w[i−Nk] ⊕ subWord(w[i−1]).
   // • For all other cases, w[i] = w[i−Nk] ⊕ w[i−1].
   uint8_t sub_rot_word [WSIZE];
-//  printf("i\ttemp\t\tAf Rw\t\tAf Sw\t\tRcon\t\tAf XOR\t\tw[i-Nk]\t\tw[i]\n........\n");
   for (int i = Nk; i < (4*(Nr+1)); i++)
   {
-//    printf("%d\t", i);
     for (int w_idx = 0; w_idx < WSIZE; w_idx++)
       sub_rot_word[w_idx] = w[i-1][w_idx];
-//    printWord(sub_rot_word);
-//    printf("\t");
     if (i%Nk == 0)
     {
       rotWord(sub_rot_word);
-//      printWord(sub_rot_word);
-//      printf("\t");
       subWord(sub_rot_word);
-//      printWord(sub_rot_word);
-//      printf("\t");
-//      printf("%d,", (i/Nk)-1);
-//      printWord(Rcon[(i/Nk)-1]);
-//      printf("\t");
       for (int w_idx = 0; w_idx < WSIZE; w_idx++)
         w[i][w_idx] = (sub_rot_word[w_idx]) ^ (Rcon[(i/Nk)-1][w_idx]);
-//      printWord(w[i]);
-//      printf("\t");
     }
     else if ((Nk > 6) && (i%Nk == 4))
     {
-//      printf("\t\t");
       subWord(sub_rot_word); 
-//      printWord(sub_rot_word);
-//      printf("\t\t\t\t\t");
       for (int w_idx = 0; w_idx < WSIZE; w_idx++)
         w[i][w_idx] = (sub_rot_word[w_idx]);
     }
     else
     {
-//      printf("\t\t\t\t\t\t\t\t");
       for (int w_idx = 0; w_idx < WSIZE; w_idx++)
         w[i][w_idx] = (w[i-1][w_idx]);
     }
-//    printWord(w[i-Nk]);
-//    printf("\t");
     for (int w_idx = 0; w_idx < WSIZE; w_idx++)
         w[i][w_idx] = (w[i-Nk][w_idx]) ^ (w[i][w_idx]);
-//    printWord(w[i]);
-//    printf("\n");
   }
-
-  // TEMP
-  // printf("i\t\tw\n........\n");
-  // for (int i = 0; i < (4*(Nr+1)); i++)
-  // {
-  //   printf("%d\t\t", i);
-  //   printWord(w[i]);
-  //   printf("\n");
-  // }
 
   return 0;
 }
@@ -193,9 +159,6 @@ int cipher(uint8_t state[WSIZE][Nb], uint8_t w[4*(Nr+1)][WSIZE])
 // Equivalent to an SBox lookup of every byte in the state
 void subBytes(uint8_t state[WSIZE][Nb])
 {
-  // printf("---------------subBytes-----------------\n");
-  // printf("Before:\n");
-  // printState(state);
   for (int row = 0; row < WSIZE; row++)
   {
     for (int col = 0; col < Nb; col++)
@@ -203,8 +166,6 @@ void subBytes(uint8_t state[WSIZE][Nb])
       state[row][col] = sBox(state[row][col]);
     }
   }
-  // printf("After:\n");
-  // printState(state);
   return;
 }
 
@@ -212,9 +173,6 @@ void subBytes(uint8_t state[WSIZE][Nb])
 // Bytes in the last three rows of the state are cyclically shifted
 void shiftRows(uint8_t state[WSIZE][Nb]) 
 {
-  // printf("--------------------shiftRows-------------------\n");
-  // printf("Before:\n");
-  // printState(state);
   uint8_t temp_byte;
   for (int row = 1; row < WSIZE; row++)
   {
@@ -229,8 +187,6 @@ void shiftRows(uint8_t state[WSIZE][Nb])
       state[row][Nb-1] = temp_byte;
     }
   }
-  // printf("After:\n");
-  // printState(state);
   return;
 }
 
@@ -243,25 +199,18 @@ void shiftRows(uint8_t state[WSIZE][Nb])
 // This is Galois Field Matrix Multiplication, so the result is non-obvious.
 void mixColumns(uint8_t state[WSIZE][Nb]) 
 {
-  // printf("--------------------MixColumns-------------------\n");
-  // printf("Before:\n");
-  // printState(state);
   uint8_t temp_col[4];
   for (int col = 0; col < Nb; col++)
   {
-    // printf("col : %d\n", col);
     for (int row = 0; row < WSIZE; row++)
     {
       temp_col[row] = state[row][col];
-      // printf("%02x\n", temp_col[row]);
     }
     state[0][col] = gfMult(2,temp_col[0]) ^ gfMult(3,temp_col[1]) ^ temp_col[2]           ^ temp_col[3];
     state[1][col] = temp_col[0]           ^ gfMult(2,temp_col[1]) ^ gfMult(3,temp_col[2]) ^ temp_col[3];
     state[2][col] = temp_col[0]           ^ temp_col[1]           ^ gfMult(2,temp_col[2]) ^ gfMult(3,temp_col[3]);
     state[3][col] = gfMult(3,temp_col[0]) ^ temp_col[1]           ^ temp_col[2]           ^ gfMult(2,temp_col[3]);
-  } 
-  // printf("After:\n");
-  // printState(state);
+  }
   return;
 }
 
@@ -271,15 +220,6 @@ void mixColumns(uint8_t state[WSIZE][Nb])
 // [s'_0c, s'_1c, s'_2c, s'_3c] = [s_0c, s_1c, s_2c, s_3c] ⊕ [w_(4*round+c)]
 void addRoundKey(uint8_t state[WSIZE][Nb], uint8_t round_key[4][WSIZE]) 
 {
-  // printf("--------------------addRoundKey--------------------\n");
-  // printf("roundkey: \n");
-  // for (int r = 0; r < 4; r++)
-  //   for (int c = 0; c < WSIZE; c++)
-  //     printf("%02x", round_key[r][c]);
-  // printf("\n");
-
-  // printf("Before:\n");
-  // printState(state);
   for (int i = 0; i < 4; i++)
   {
     for (int j = 0; j < 4; j++)
@@ -287,8 +227,6 @@ void addRoundKey(uint8_t state[WSIZE][Nb], uint8_t round_key[4][WSIZE])
       state[j][i] = state[j][i] ^ round_key[i][j]; // Need to interpret row/col differently because of inconsistencies
     }
   }
-  // printf("After:\n");
-  // printState(state);
   return;
 }
 
@@ -329,9 +267,6 @@ int invCipher(uint8_t state[WSIZE][Nb], uint8_t w[4*(Nr+1)][WSIZE])
 // Equivalent to an invSBox lookup of every byte in the state
 void invSubBytes(uint8_t state[WSIZE][Nb])
 {
-  // printf("---------------invSubBytes-----------------\n");
-  // printf("Before:\n");
-  // printState(state);
   for (int row = 0; row < WSIZE; row++)
   {
     for (int col = 0; col < Nb; col++)
@@ -339,8 +274,6 @@ void invSubBytes(uint8_t state[WSIZE][Nb])
       state[row][col] = invSBox(state[row][col]);
     }
   }
-  // printf("After:\n");
-  // printState(state);
   return;
 }
 
@@ -348,9 +281,6 @@ void invSubBytes(uint8_t state[WSIZE][Nb])
 // Bytes in the last three rows of the state are cyclically shifted in the opposite direction
 void invShiftRows(uint8_t state[WSIZE][Nb]) 
 {
-  // printf("--------------------invShiftRows-------------------\n");
-  // printf("Before:\n");
-  // printState(state);
   uint8_t temp_byte;
   for (int row = 1; row < WSIZE; row++)
   {
@@ -365,8 +295,6 @@ void invShiftRows(uint8_t state[WSIZE][Nb])
       state[row][0] = temp_byte;
     }
   }
-  // printf("After:\n");
-  // printState(state);
   return;
 }
 
@@ -379,25 +307,18 @@ void invShiftRows(uint8_t state[WSIZE][Nb])
 // This is Galois Field Matrix Multiplication, so the result is non-obvious.
 void invMixColumns(uint8_t state[WSIZE][Nb]) 
 {
-  // printf("--------------------invMixColumns-------------------\n");
-  // printf("Before:\n");
-  // printState(state);
   uint8_t temp_col[4];
   for (int col = 0; col < Nb; col++)
   {
-    // printf("col : %d\n", col);
     for (int row = 0; row < WSIZE; row++)
     {
       temp_col[row] = state[row][col];
-      // printf("%02x\n", temp_col[row]);
     }
     state[0][col] = gfMult(0x0e,temp_col[0]) ^ gfMult(0x0b,temp_col[1]) ^ gfMult(0x0d,temp_col[2]) ^ gfMult(0x09,temp_col[3]);
     state[1][col] = gfMult(0x09,temp_col[0]) ^ gfMult(0x0e,temp_col[1]) ^ gfMult(0x0b,temp_col[2]) ^ gfMult(0x0d,temp_col[3]);
     state[2][col] = gfMult(0x0d,temp_col[0]) ^ gfMult(0x09,temp_col[1]) ^ gfMult(0x0e,temp_col[2]) ^ gfMult(0x0b,temp_col[3]);
     state[3][col] = gfMult(0x0b,temp_col[0]) ^ gfMult(0x0d,temp_col[1]) ^ gfMult(0x09,temp_col[2]) ^ gfMult(0x0e,temp_col[3]);
   } 
-  // printf("After:\n");
-  // printState(state);
   return;
 }
 
@@ -502,14 +423,12 @@ uint8_t gfMult(uint8_t b, uint8_t c)
     // Check if that bit is set
     if (c & temp_mask)
     {
-      // printf("c_idx %02x\t", c_idx);
       // Run xTimes based on the log of the current bit index that we are extracting
       temp_byte = b;
       for (int x = 0; x < c_idx; x++)
       {
         temp_byte = xTimes(temp_byte);
       }
-      // printf("temp_byte: %02x\n", temp_byte);
 
       // GF add the result to the output
       out = gfAdd(out, temp_byte);
@@ -520,31 +439,3 @@ uint8_t gfMult(uint8_t b, uint8_t c)
   }
   return out;
 }
-
-// UNUSED
-// GF Matrix Mult with fixed matrix widths:
-// IN:
-// [d0] = [a00 a01 a02 a03] [b0]
-// [d1] = [a10 a11 a12 a13] [b1]
-// [d2] = [a20 a21 a22 a23] [b2]
-// [d3] = [a30 a31 a32 a33] [b3]
-// OUT:
-// d0 = (a00•b0)⊕(a01•b1)⊕(a02•b2)⊕(a03•b3)
-// d1 = (a10•b0)⊕(a11•b1)⊕(a12•b2)⊕(a13•b3)
-// d2 = (a20•b0)⊕(a21•b1)⊕(a22•b2)⊕(a23•b3)
-// d3 = (a30•b0)⊕(a31•b1)⊕(a32•b2)⊕(a33•b3)
-// where ⊕ is bitwise XOR and • is GF multiplication represented by the gfMult function. 
-// void gfFixedMatrixMult(uint8_t a[4][4], uint8_t b[4], uint8_t d[4])
-// {
-//   uint8_t temp_byte;
-//   for (int row = 0; row < 4; row++)
-//   {
-//     temp_byte = 0x00;
-//     for (int col = 0; col < 4; col++)
-//     {
-//       temp_byte = temp_byte ^ gfMult(a[row][col], b[col]);
-//     }
-//     d[row] = temp_byte;
-//   }
-//   return;
-// }
