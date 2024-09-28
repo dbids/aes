@@ -7,18 +7,32 @@
 
 // ------------------------------------------ AES Top ------------------------------------------
 // TODO
-int aes(const uint8_t* key, const uint8_t* iv, uint8_t* data, size_t data_len)
+int aes(const uint8_t key[AES_KEYLEN], uint8_t data[WSIZE][Nb], bool is_encrypt)
 {
-  // Check inputs
-  if (data_len % AES_BLOCKLEN) {
-    return -1; // data length not a multiple of AES_BLOCKLEN
+  // Generate round keys
+  uint8_t round_keys[4*(Nr+1)][WSIZE];  
+  if (keyExpansion(key_in, round_keys) == -1)
+  {
+    printf("Key Expansion Failed!!");
+    return -1;
   }
 
-  // Setup state
-  uint8_t state [4][Nb];
-  
-
-
+  // Perform encrypt / decrypt
+  if (is_encrypt)
+  {
+    if (cipher(in, round_keys) == -1)
+    {
+      printf("Cipher Failed!!");
+      return -1;
+    }
+  }
+  else
+  {
+    if(invCipher(in, round_keys) == -1)
+    {
+      printf("Inverse Cipher Failed!!");
+    }
+  }
 
   return 0;
 }
@@ -146,7 +160,7 @@ void subWord (uint8_t word_in[WSIZE])
 // ------------------------------------------ Cipher ------------------------------------------
 // Forward Cipher (Encryption)
 // Takes in initial state and round keys... outputs final state by ref.
-int cipher(uint8_t state[4][Nb], uint8_t w[4*(Nr+1)][WSIZE])
+int cipher(uint8_t state[WSIZE][Nb], uint8_t w[4*(Nr+1)][WSIZE])
 {
   // Setup four word variable to handle round key
   uint8_t round_key[4][WSIZE]; 
@@ -177,12 +191,12 @@ int cipher(uint8_t state[4][Nb], uint8_t w[4*(Nr+1)][WSIZE])
 
 // SubBytes()
 // Equivalent to an SBox lookup of every byte in the state
-void subBytes(uint8_t state[4][Nb])
+void subBytes(uint8_t state[WSIZE][Nb])
 {
   printf("---------------subBytes-----------------\n");
   printf("Before:\n");
   printState(state);
-  for (int row = 0; row < 4; row++)
+  for (int row = 0; row < WSIZE; row++)
   {
     for (int col = 0; col < Nb; col++)
     {
@@ -196,13 +210,13 @@ void subBytes(uint8_t state[4][Nb])
 
 // ShiftRows()
 // Bytes in the last three rows of the state of cyclically shifted
-void shiftRows(uint8_t state[4][Nb]) 
+void shiftRows(uint8_t state[WSIZE][Nb]) 
 {
   printf("--------------------shiftRows-------------------\n");
   printf("Before:\n");
   printState(state);
   uint8_t temp_byte;
-  for (int row = 1; row < 4; row++)
+  for (int row = 1; row < WSIZE; row++)
   {
     // Shift start to end once in row 1, twice in row 2, and thrice in row 3
     for (int shift_idx = 0; shift_idx < row; shift_idx++)
@@ -227,16 +241,16 @@ void shiftRows(uint8_t state[4][Nb])
 // [s'_2c] = [01 01 02 03] [s_2c]
 // [s'_3c] = [03 01 01 02] [s_3c]
 // This is Galois Field Matrix Multiplication, so the result is non-obvious.
-void mixColumns(uint8_t state[4][Nb]) 
+void mixColumns(uint8_t state[WSIZE][Nb]) 
 {
-  printf("--------------------MixColumns-------------------\n");
-  printf("Before:\n");
-  printState(state);
+  // printf("--------------------MixColumns-------------------\n");
+  // printf("Before:\n");
+  // printState(state);
   uint8_t temp_col[4];
   for (int col = 0; col < Nb; col++)
   {
     // printf("col : %d\n", col);
-    for (int row = 0; row < 4; row++)
+    for (int row = 0; row < WSIZE; row++)
     {
       temp_col[row] = state[row][col];
       // printf("%02x\n", temp_col[row]);
@@ -246,8 +260,8 @@ void mixColumns(uint8_t state[4][Nb])
     state[2][col] = temp_col[0]           ^ temp_col[1]           ^ gfMult(2,temp_col[2]) ^ gfMult(3,temp_col[3]);
     state[3][col] = gfMult(3,temp_col[0]) ^ temp_col[1]           ^ temp_col[2]           ^ gfMult(2,temp_col[3]);
   } 
-  printf("After:\n");
-  printState(state);
+  // printf("After:\n");
+  // printState(state);
   return;
 }
 
@@ -255,26 +269,26 @@ void mixColumns(uint8_t state[4][Nb])
 // A Round Key is applied to the state by applying a bitwise XOR operation.
 // Each round key consists of four words, each of which is applied to a column of the state as follows:
 // [s'_0c, s'_1c, s'_2c, s'_3c] = [s_0c, s_1c, s_2c, s_3c] ⊕ [w_(4*round+c)]
-void addRoundKey(uint8_t state[4][Nb], uint8_t round_key[4][WSIZE]) 
+void addRoundKey(uint8_t state[WSIZE][Nb], uint8_t round_key[4][WSIZE]) 
 {
   printf("--------------------addRoundKey--------------------\n");
-  printf("roundkey: \n");
-  for (int r = 0; r < 4; r++)
-    for (int c = 0; c < 4; c++)
-      printf("%02x", round_key[r][c]);
-  printf("\n");
+  // printf("roundkey: \n");
+  // for (int r = 0; r < 4; r++)
+  //   for (int c = 0; c < WSIZE; c++)
+  //     printf("%02x", round_key[r][c]);
+  // printf("\n");
 
-  printf("Before:\n");
-  printState(state);
-  for (int col = 0; col < 4; col++)
+  // printf("Before:\n");
+  // printState(state);
+  for (int i = 0; i < ; i++)
   {
-    for (int row = 0; row < 4; row++)
+    for (int j = 0; j < 4; j++)
     {
-      state[row][col] = state[row][col] ^ round_key[col][row];
+      state[row][col] = state[j][i] ^ round_key[i][j]; // Need to interpret row/col differently because of inconsistencies
     } 
   }
-  printf("After:\n");
-  printState(state);
+  // printf("After:\n");
+  // printState(state);
   return;
 }
 
