@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 // --------- defs --------- 
 #define AES_BLOCKLEN 16 // Block length in bytes - AES is 128b block only
@@ -42,7 +43,7 @@ typedef uint8_t block_t[WSIZE][Nb];
 // --------- Functions --------- 
 
 // ------------------------------------------ AES Top ------------------------------------------ 
-int aes(const uint8_t key[AES_KEYLEN], block_t data, bool is_encrypt);
+int aes(const uint8_t key[AES_KEYLEN], block_t data, const bool is_encrypt);
 
 // ------------------------------------------ Key Expansion ------------------------------------------
 int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE]);

@@ -23,3 +23,12 @@ void printState(uint8_t state_in[4][Nb])
     printf("\n");
   }
 }
+
+void printData(uint8_t* data, size_t data_size)
+{
+  for (int d = 0; d < data_size; d++)
+  {
+    printf("%02x", data[d]);
+  }
+  printf("\n");
+}

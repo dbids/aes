@@ -1,12 +1,11 @@
 // Devin Bidstrup
 // Created : 9/22/24
 
-#include <stdio.h>
 #include "aes.h"
 
 // ------------------------------------------ AES Top ------------------------------------------
 // Takes in key, dervies round keys, and then either decrypts or encrypts
-int aes(const uint8_t key[AES_KEYLEN], block_t data, bool is_encrypt)
+int aes(const uint8_t key[AES_KEYLEN], block_t data, const bool is_encrypt)
 {
   // Generate round keys
   uint8_t round_keys[4*(Nr+1)][WSIZE];  

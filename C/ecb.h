@@ -4,6 +4,8 @@
 #ifndef _ECB_H_
 #define _ECB_H_
 
+#include <stdbool.h>
+#include <stdio.h>
 #include "aes.h"
 
 // Important Excerpts from FIPS 800-38a:
@@ -14,6 +16,9 @@
 //   block of the ciphertext. The resulting sequence of output blocks is the plaintext.
 // - In ECB encryption and ECB decryption, multiple forward cipher functions and inverse cipher
 //   functions can be computed in parallel.
+int aes_ecb(const uint8_t key[AES_KEYLEN], uint8_t* data, const bool is_encrypt, size_t data_size);
+
+
 
 #endif
 

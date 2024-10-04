@@ -3,30 +3,31 @@
 
 #include "ecb.h"
 
-int aes(const uint8_t key[AES_KEYLEN], uint8_t data[WSIZE][Nb], bool is_encrypt)
+int aes_ecb(const uint8_t key[AES_KEYLEN], uint8_t* data, const bool is_encrypt, size_t data_size)
 {
-  // Generate round keys
-  uint8_t round_keys[4*(Nr+1)][WSIZE];  
-  if (keyExpansion(key, round_keys) == -1)
+  // Check for block size data input
+  if (data_size % AES_BLOCKLEN)
   {
-    printf("Key Expansion Failed!!");
+    printf("Input can only be in block (16B/128b) size!!");
     return -1;
   }
 
-  // Perform encrypt / decrypt
-  if (is_encrypt)
+  // Call AES for each block
+  size_t block_num = data_size / AES_BLOCKLEN;
+  block_t block;
+  for (int b_idx = 0; b_idx < block_num; b_idx++)
   {
-    if (cipher(data, round_keys) == -1)
+    for (int i = 0; i < Nb; i++)
     {
-      printf("Cipher Failed!!");
-      return -1;
+      for (int j = 0; j < WSIZE; j++)
+      {
+        block[i][j] = data[(b_idx * AES_BLOCKLEN) + (i * Nb) + j];
+      }
     }
-  }
-  else
-  {
-    if(invCipher(data, round_keys) == -1)
+    if (aes(key, block, is_encrypt))
     {
-      printf("Inverse Cipher Failed!!");
+      printf("AES function failed");
+      return -1;
     }
   }
 
