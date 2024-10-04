@@ -36,37 +36,39 @@
 #endif
 
 // --------- typedefs ---------
+// Block size words
+typedef uint8_t block_t[WSIZE][Nb];
 
 // --------- Functions --------- 
 
 // ------------------------------------------ AES Top ------------------------------------------ 
-int aes(const uint8_t key[AES_KEYLEN], uint8_t data[WSIZE][Nb], bool is_encrypt);
+int aes(const uint8_t key[AES_KEYLEN], block_t data, bool is_encrypt);
 
 // ------------------------------------------ Key Expansion ------------------------------------------
-int  keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE]);
+int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE]);
 void rotWord (uint8_t word_in[WSIZE]);
 void subWord (uint8_t word_in[WSIZE]);
 
 // ------------------------------------------ Cipher ------------------------------------------
-int  cipher(uint8_t state[4][Nb], uint8_t w[4*(Nr+1)][WSIZE]);
-void subBytes(uint8_t state[4][Nb]);
-void shiftRows(uint8_t state[4][Nb]);
-void mixColumns(uint8_t state[4][Nb]);
-void addRoundKey(uint8_t state[4][Nb], uint8_t fourW[4][WSIZE]);
+int  cipher     (block_t state, uint8_t w[4*(Nr+1)][WSIZE]);
+void subBytes   (block_t state);
+void shiftRows  (block_t state);
+void mixColumns (block_t state);
+void addRoundKey(block_t state, uint8_t fourW[4][WSIZE]);
 
 
 // ------------------------------------------ Inverse Cipher ------------------------------------------ 
-int  invCipher(uint8_t state[4][Nb], uint8_t w[4*(Nr+1)][WSIZE]);
-void invSubBytes(uint8_t state[4][Nb]);
-void invShiftRows(uint8_t state[4][Nb]);
-void invMixColumns(uint8_t state[4][Nb]);
+int  invCipher    (block_t state, uint8_t w[4*(Nr+1)][WSIZE]);
+void invSubBytes  (block_t state);
+void invShiftRows (block_t state);
+void invMixColumns(block_t state);
 
 
 // ------------------------------------------ Common Functions ------------------------------------------
-uint8_t sBox(uint8_t byte_in);
+uint8_t sBox   (uint8_t byte_in);
 uint8_t invSBox(uint8_t byte_in);
 
-uint8_t gfAdd(uint8_t a, uint8_t b);
+uint8_t gfAdd (uint8_t a, uint8_t b);
 uint8_t xTimes(uint8_t b);
 uint8_t gfMult(uint8_t b, uint8_t c);
 // void gfFixedMatrixMult(uint8_t a[4][4], uint8_t b[4], uint8_t d[4]); UNUSED

@@ -6,7 +6,7 @@
 
 // ------------------------------------------ AES Top ------------------------------------------
 // Takes in key, dervies round keys, and then either decrypts or encrypts
-int aes(const uint8_t key[AES_KEYLEN], uint8_t data[WSIZE][Nb], bool is_encrypt)
+int aes(const uint8_t key[AES_KEYLEN], block_t data, bool is_encrypt)
 {
   // Generate round keys
   uint8_t round_keys[4*(Nr+1)][WSIZE];  
@@ -126,7 +126,7 @@ void subWord (uint8_t word_in[WSIZE])
 // ------------------------------------------ Cipher ------------------------------------------
 // Forward Cipher (Encryption)
 // Takes in initial state and round keys... outputs final state by ref.
-int cipher(uint8_t state[WSIZE][Nb], uint8_t w[4*(Nr+1)][WSIZE])
+int cipher(block_t state, uint8_t w[4*(Nr+1)][WSIZE])
 {
   // Setup four word variable to handle round key
   uint8_t round_key[4][WSIZE]; 
@@ -157,7 +157,7 @@ int cipher(uint8_t state[WSIZE][Nb], uint8_t w[4*(Nr+1)][WSIZE])
 
 // SubBytes()
 // Equivalent to an SBox lookup of every byte in the state
-void subBytes(uint8_t state[WSIZE][Nb])
+void subBytes(block_t state)
 {
   for (int row = 0; row < WSIZE; row++)
   {
@@ -171,7 +171,7 @@ void subBytes(uint8_t state[WSIZE][Nb])
 
 // ShiftRows()
 // Bytes in the last three rows of the state are cyclically shifted
-void shiftRows(uint8_t state[WSIZE][Nb]) 
+void shiftRows(block_t state) 
 {
   uint8_t temp_byte;
   for (int row = 1; row < WSIZE; row++)
@@ -197,7 +197,7 @@ void shiftRows(uint8_t state[WSIZE][Nb])
 // [s'_2c] = [01 01 02 03] [s_2c]
 // [s'_3c] = [03 01 01 02] [s_3c]
 // This is Galois Field Matrix Multiplication, so the result is non-obvious.
-void mixColumns(uint8_t state[WSIZE][Nb]) 
+void mixColumns(block_t state) 
 {
   uint8_t temp_col[4];
   for (int col = 0; col < Nb; col++)
@@ -218,7 +218,7 @@ void mixColumns(uint8_t state[WSIZE][Nb])
 // A Round Key is applied to the state by applying a bitwise XOR operation.
 // Each round key consists of four words, each of which is applied to a column of the state as follows:
 // [s'_0c, s'_1c, s'_2c, s'_3c] = [s_0c, s_1c, s_2c, s_3c] ⊕ [w_(4*round+c)]
-void addRoundKey(uint8_t state[WSIZE][Nb], uint8_t round_key[4][WSIZE]) 
+void addRoundKey(block_t state, uint8_t round_key[4][WSIZE]) 
 {
   for (int i = 0; i < 4; i++)
   {
@@ -234,7 +234,7 @@ void addRoundKey(uint8_t state[WSIZE][Nb], uint8_t round_key[4][WSIZE])
 // ------------------------------------------ Inverse Cipher ------------------------------------------ 
 // inverse Cipher (Decryption)
 // Takes in initial state and round keys... outputs final state by ref.
-int invCipher(uint8_t state[WSIZE][Nb], uint8_t w[4*(Nr+1)][WSIZE])
+int invCipher(block_t state, uint8_t w[4*(Nr+1)][WSIZE])
 {
   // Setup four word variable to handle round key
   uint8_t round_key[4][WSIZE]; 
@@ -265,7 +265,7 @@ int invCipher(uint8_t state[WSIZE][Nb], uint8_t w[4*(Nr+1)][WSIZE])
 
 // InvSubBytes()
 // Equivalent to an invSBox lookup of every byte in the state
-void invSubBytes(uint8_t state[WSIZE][Nb])
+void invSubBytes(block_t state)
 {
   for (int row = 0; row < WSIZE; row++)
   {
@@ -279,7 +279,7 @@ void invSubBytes(uint8_t state[WSIZE][Nb])
 
 // InvShiftRows()
 // Bytes in the last three rows of the state are cyclically shifted in the opposite direction
-void invShiftRows(uint8_t state[WSIZE][Nb]) 
+void invShiftRows(block_t state) 
 {
   uint8_t temp_byte;
   for (int row = 1; row < WSIZE; row++)
@@ -305,7 +305,7 @@ void invShiftRows(uint8_t state[WSIZE][Nb])
 // [s'_2c] = [01 01 02 03] [s_2c]
 // [s'_3c] = [03 01 01 02] [s_3c]
 // This is Galois Field Matrix Multiplication, so the result is non-obvious.
-void invMixColumns(uint8_t state[WSIZE][Nb]) 
+void invMixColumns(block_t state) 
 {
   uint8_t temp_col[4];
   for (int col = 0; col < Nb; col++)
