@@ -1,6 +1,2 @@
-.vscode/settings.json
-C/test
-*.o
-bin
-obj
-/build*
+*vscode*
+*build*
