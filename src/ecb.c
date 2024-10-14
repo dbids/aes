@@ -17,6 +17,7 @@ int aes_ecb(const uint8_t key[AES_KEYLEN], uint8_t* data, const bool is_encrypt,
   block_t block;
   for (int b_idx = 0; b_idx < block_num; b_idx++)
   {
+    // Copy block from data
     for (int i = 0; i < Nb; i++)
     {
       for (int j = 0; j < WSIZE; j++)
@@ -24,10 +25,20 @@ int aes_ecb(const uint8_t key[AES_KEYLEN], uint8_t* data, const bool is_encrypt,
         block[i][j] = data[(b_idx * AES_BLOCKLEN) + (i * Nb) + j];
       }
     }
+
     if (aes(key, block, is_encrypt))
     {
       printf("AES function failed");
       return -1;
+    }
+
+    // Copy block back to data
+    for (int i = 0; i < Nb; i++)
+    {
+      for (int j = 0; j < WSIZE; j++)
+      {
+        data[(b_idx * AES_BLOCKLEN) + (i * Nb) + j] = block[i][j];
+      }
     }
   }
 

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include "aes.h"
 #include "debug.h"
+#include "ecb.h"
 
 #define TEST_NUM = 0
 
@@ -269,27 +270,32 @@ int main(int argc, char *argv[]) {
   {
     #if defined(AES128) && (AES128 == 1)
     printf("############################\n128-bit AES-ECB Test\n############################\n");
-    // Define sample test case variables
+
+    // KEY = 00000000000000000000000000000000
     uint8_t key[AES_KEYLEN] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    printf("Key = ");
+    printData(key, AES_KEYLEN);
+
     // PLAINTEXT = 80000000000000000000000000000000 
     size_t data_size = 16;
     uint8_t* data_in = malloc(data_size);
     data_in[0] = 0x80;
     for (int i = 1; i < data_size; i++)
       data_in[i] = 0x00;
-
-    // Call the AES function for encryption
-    printf("---------------------Before Encryption:---------------------\n");
+    printf("Plaintext = ");
     printData(data_in, data_size);
-    int rc = aes(key, data_in, 1);
+
+    // Call the AES_ECB function for encryption
+    int rc = aes_ecb(key, data_in, 1, data_size);
     if (rc == -1)
     {
       printf("Encryption Failed!!");
       free(data_in);
       return -1;
     }
-    printf("---------------------After Encryption---------------------\n");
-    // CIPHERTEXT = 3ad78e726c1ec02b7ebfe92b23d9ec34 
+
+    // CIPHERTEXT = 3ad78e726c1ec02b7ebfe92b23d9ec34
+    printf("Ciphertext = "); 
     printData(data_in, data_size);
     free(data_in);
 
