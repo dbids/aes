@@ -2,6 +2,7 @@
 // Created : 9/22/24
 
 #include "aes.h"
+#include "debug.h"
 
 // ------------------------------------------ AES Top ------------------------------------------
 // Takes in key, dervies round keys, and then either decrypts or encrypts
@@ -14,6 +15,20 @@ int aes(const uint8_t key[AES_KEYLEN], block_t data, const bool is_encrypt)
     printf("Key Expansion Failed!!");
     return -1;
   }
+  printf("---------------------Check key expansion---------------------\n");
+  for (int r = 0; r < Nr+1; r++)
+    {
+      printf("round: %d,\t roundKey: ", r);
+      for (int kl = 0; kl < AES_KEYLEN/WSIZE; kl++) 
+      {
+        for (int b_idx = 0; b_idx < WSIZE; b_idx++)
+        {
+          printf("%02x", round_keys[(4*r)+kl][b_idx]);
+        }
+      }
+      printf("\n");
+    }
+    printf("---------------------\n");
 
   // Perform encrypt / decrypt
   if (is_encrypt)
@@ -178,12 +193,12 @@ void shiftRows(block_t state)
     // Shift start to end once in row 1, twice in row 2, and thrice in row 3
     for (int shift_idx = 0; shift_idx < row; shift_idx++)
     {
-      temp_byte = state[row][0];
+      temp_byte = state[0][row];
       for (int col = 0; col < Nb-1; col++)
       {
-        state[row][col] = state[row][col+1];
+        state[col][row] = state[col+1][row];
       }
-      state[row][Nb-1] = temp_byte;
+      state[Nb-1][row] = temp_byte;
     }
   }
   return;
@@ -203,12 +218,12 @@ void mixColumns(block_t state)
   {
     for (int row = 0; row < WSIZE; row++)
     {
-      temp_col[row] = state[row][col];
+      temp_col[row] = state[col][row];
     }
-    state[0][col] = gfMult(2,temp_col[0]) ^ gfMult(3,temp_col[1]) ^ temp_col[2]           ^ temp_col[3];
-    state[1][col] = temp_col[0]           ^ gfMult(2,temp_col[1]) ^ gfMult(3,temp_col[2]) ^ temp_col[3];
-    state[2][col] = temp_col[0]           ^ temp_col[1]           ^ gfMult(2,temp_col[2]) ^ gfMult(3,temp_col[3]);
-    state[3][col] = gfMult(3,temp_col[0]) ^ temp_col[1]           ^ temp_col[2]           ^ gfMult(2,temp_col[3]);
+    state[col][0] = gfMult(2,temp_col[0]) ^ gfMult(3,temp_col[1]) ^ temp_col[2]           ^ temp_col[3];
+    state[col][1] = temp_col[0]           ^ gfMult(2,temp_col[1]) ^ gfMult(3,temp_col[2]) ^ temp_col[3];
+    state[col][2] = temp_col[0]           ^ temp_col[1]           ^ gfMult(2,temp_col[2]) ^ gfMult(3,temp_col[3]);
+    state[col][3] = gfMult(3,temp_col[0]) ^ temp_col[1]           ^ temp_col[2]           ^ gfMult(2,temp_col[3]);
   }
   return;
 }
@@ -223,7 +238,7 @@ void addRoundKey(block_t state, uint8_t round_key[4][WSIZE])
   {
     for (int j = 0; j < 4; j++)
     {
-      state[j][i] = state[j][i] ^ round_key[i][j]; // Need to interpret row/col differently because of inconsistencies
+      state[j][i] = state[j][i] ^ round_key[j][i];
     }
   }
   return;
