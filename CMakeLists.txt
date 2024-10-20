@@ -49,16 +49,16 @@ add_subdirectory(apps)
 ## testing ####################################################################
 ###############################################################################
 
-# # Testing only available if this is the main app
-# if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-#   # Testing only available if this is the main app
-#   # Note this needs to be done in the main CMakeLists
-#   # since it calls enable_testing, which must be in the
-#   # main CMakeLists.
-#   include(CTest)
+# Testing only available if this is the main app
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+  # Testing only available if this is the main app
+  # Note this needs to be done in the main CMakeLists
+  # since it calls enable_testing, which must be in the
+  # main CMakeLists.
+  include(CTest)
 
-#   # Add tests subdirectory
-#   add_subdirectory(tests)
-# endif()
+  # Add tests subdirectory
+  add_subdirectory(tests)
+endif()
 
 
