@@ -4,45 +4,44 @@
 #ifndef _AES_H_
 #define _AES_H_
 
-// --------- libraries --------- 
+// --------- libraries ---------
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdio.h>
 
-// --------- defs --------- 
+// --------- defs ---------
 #define AES_BLOCKLEN 16 // Block length in bytes - AES is 128b block only
 #define Nb 4            // Block length in 32 bit words
 #define IV_LENGTH 96    // Only allow 96-bit IVs
 #define WSIZE 4         // Size of a word in bytes
 
-#define AES128 1
+//#define AES128 1
 //#define AES192 1
-//#define AES256 1
+#define AES256 1
 #if defined(AES256) && (AES256 == 1)
     #define AES_KEYLEN 32
     #define AES_keyExpSize 240
-    #define Nk 8
     #define Nr 14
 #elif defined(AES192) && (AES192 == 1)
     #define AES_KEYLEN 24
     #define AES_keyExpSize 208
-    #define Nk 6
     #define Nr 12
 #else
     #define AES_KEYLEN 16      // Key length in bytes
     #define AES_keyExpSize 176
-    #define Nk 4               // The number of 32 bit words in a key.
     #define Nr 10              // The number of rounds in AES Cipher.
 #endif
+
+#define Nk AES_KEYLEN/WSIZE // The number of 32 bit words in a key.
 
 // --------- typedefs ---------
 // Block size words
 typedef uint8_t block_t[WSIZE][Nb];
 
-// --------- Functions --------- 
+// --------- Functions ---------
 
-// ------------------------------------------ AES Top ------------------------------------------ 
+// ------------------------------------------ AES Top ------------------------------------------
 int aes(const uint8_t key[AES_KEYLEN], block_t data, const bool is_encrypt);
 
 // ------------------------------------------ Key Expansion ------------------------------------------
@@ -58,7 +57,7 @@ void mixColumns (block_t state);
 void addRoundKey(block_t state, uint8_t fourW[4][WSIZE]);
 
 
-// ------------------------------------------ Inverse Cipher ------------------------------------------ 
+// ------------------------------------------ Inverse Cipher ------------------------------------------
 int  invCipher    (block_t state, uint8_t w[4*(Nr+1)][WSIZE]);
 void invSubBytes  (block_t state);
 void invShiftRows (block_t state);

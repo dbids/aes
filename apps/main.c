@@ -80,12 +80,9 @@ int main(int argc, char *argv[]) {
     for (int r = 0; r < Nr+1; r++)
     {
       printf("round: %d,\t roundKey: ", r);
-      for (int kl = 0; kl < AES_KEYLEN/WSIZE; kl++) 
+      for (int kl = 0; kl < Nk; kl++)
       {
-        for (int b_idx = 0; b_idx < WSIZE; b_idx++)
-        {
-          printf("%02x", round_keys[(4*r)+kl][b_idx]);
-        }
+        printWord(round_keys[(4*r)+kl]);
       }
       printf("\n");
     }
@@ -99,7 +96,7 @@ int main(int argc, char *argv[]) {
     block_t in = {{0x32, 0x88, 0x31, 0xe0}, {0x43, 0x5a, 0x31, 0x37}, {0xf6, 0x30, 0x98, 0x07}, {0xa8, 0x8d, 0xa2, 0x34}};
     uint8_t key_in[AES_KEYLEN] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
     uint8_t round_keys[4*(Nr+1)][WSIZE];
-    
+
     printf("---------------------Check key expansion---------------------\n");
     if (keyExpansion(key_in, round_keys) == -1)
     {
@@ -109,7 +106,7 @@ int main(int argc, char *argv[]) {
     for (int r = 0; r < Nr+1; r++)
     {
       printf("round: %d,\t roundKey: ", r);
-      for (int kl = 0; kl < AES_KEYLEN/WSIZE; kl++) 
+      for (int kl = 0; kl < AES_KEYLEN/WSIZE; kl++)
       {
         for (int b_idx = 0; b_idx < WSIZE; b_idx++)
         {
@@ -119,7 +116,7 @@ int main(int argc, char *argv[]) {
       printf("\n");
     }
     printf("---------------------\n");
-    
+
     printf("---------------------Before:---------------------\n");
     printState(in);
     if (cipher(in, round_keys) == -1)
@@ -142,7 +139,7 @@ int main(int argc, char *argv[]) {
     block_t in = {{0x39, 0x02, 0xdc, 0x19}, {0x25, 0xdc, 0x11, 0x6a}, {0x84, 0x09, 0x85, 0x0b}, {0x1d, 0xfb, 0x97, 0x32}};
     uint8_t key_in[AES_KEYLEN] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
     uint8_t round_keys[4*(Nr+1)][WSIZE];
-    
+
     printf("---------------------Check key expansion---------------------\n");
     if (keyExpansion(key_in, round_keys) == -1)
     {
@@ -152,7 +149,7 @@ int main(int argc, char *argv[]) {
     for (int r = 0; r < Nr+1; r++)
     {
       printf("round: %d,\t roundKey: ", r);
-      for (int kl = 0; kl < AES_KEYLEN/WSIZE; kl++) 
+      for (int kl = 0; kl < AES_KEYLEN/WSIZE; kl++)
       {
         for (int b_idx = 0; b_idx < WSIZE; b_idx++)
         {
@@ -162,7 +159,7 @@ int main(int argc, char *argv[]) {
       printf("\n");
     }
     printf("---------------------\n");
-    
+
     if (invCipher(in, round_keys) == -1)
     {
       printf("Inverse Cipher Failed!!");
@@ -184,7 +181,7 @@ int main(int argc, char *argv[]) {
     printf("---------------------After:---------------------\n");
     printState(in_state);
   }
-  
+
   // --- AES MixColumns Test ---
   else if(*argv[1] == '5')
   {
@@ -230,7 +227,7 @@ int main(int argc, char *argv[]) {
     printf("---------------------After:---------------------\n");
     printState(in_state);
   }
-  
+
   // --- AES InvMixColumns Test ---
   else if(*argv[1] == '9')
   {
@@ -277,7 +274,7 @@ int main(int argc, char *argv[]) {
     printf("Key = ");
     printData(key, AES_KEYLEN);
 
-    // PLAINTEXT = 80000000000000000000000000000000 
+    // PLAINTEXT = 80000000000000000000000000000000
     size_t data_size = 16;
     uint8_t* data_in = malloc(data_size);
     data_in[0] = 0x80;
@@ -296,15 +293,15 @@ int main(int argc, char *argv[]) {
     }
 
     // CIPHERTEXT = 3ad78e726c1ec02b7ebfe92b23d9ec34
-    printf("Ciphertext = "); 
+    printf("Ciphertext = ");
     printData(data_in, data_size);
 
     uint8_t data_out[] = { 0x3a, 0xd7, 0x8e, 0x72, 0x6c, 0x1e, 0xc0, 0x2b, 0x7e, 0xbf, 0xe9, 0x2b, 0x23, 0xd9, 0xec, 0x34 };
     if (0 == memcmp((char*) data_out, (char*) data_in, 16))
     {
       printf("SUCCESS!\n");
-    } 
-    else 
+    }
+    else
     {
       printf("FAILURE!\n");
     }
@@ -361,7 +358,7 @@ int main(int argc, char *argv[]) {
     //              25 dc 11 6a
     //              84 09 85 0b
     //              1d fb 97 32
-    printf("Ciphertext = "); 
+    printf("Ciphertext = ");
     printData(data_in, data_size);
     free(data_in);
 
