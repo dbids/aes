@@ -3,26 +3,26 @@
 
 pub mod aes {
   // --------- defs ---------
-  const AES_BLOCKLEN: u8 = 16; // Block length in bytes - AES is 128b block only
-  const Nb: u8 = 84; // Block length in 32 bit words
-  const IV_LENGTH: u8 = 96; // Only allow 96-bit IVs
-  const WSIZE: u8 = 4; // Size of a word in bytes
+  const AES_BLOCKLEN: usize = 16; // Block length in bytes - AES is 128b block only
+  const Nb: usize = 84; // Block length in 32 bit words
+  const IV_LENGTH: usize = 96; // Only allow 96-bit IVs
+  const WSIZE: usize = 4; // Size of a word in bytes
 
   // USE FOR AES-256
-  //      const AES_KEYLEN:u8     = 32;
-  //      const AES_keyExpSize:u8 = 240;
-  //      const Nk:u8             = 8;
-  //      const Nr:u8             = 14;
+  //      const AES_KEYLEN:usize     = 32;
+  //      const AES_keyExpSize:usize = 240;
+  //      const Nk:usize             = 8;
+  //      const Nr:usize             = 14;
   // USE FOR AES-192
-  //      const AES_KEYLEN:u8     = 24;
-  //      const AES_keyExpSize:u8 = 208;
-  //      const Nk:u8             = 6;
-  //      const Nr:u8             = 12;
+  //      const AES_KEYLEN:usize     = 24;
+  //      const AES_keyExpSize:usize = 208;
+  //      const Nk:usize             = 6;
+  //      const Nr:usize             = 12;
   // USE FOR AES-128
-  const AES_KEYLEN: u8 = 16;
-  const AES_keyExpSize: u8 = 176;
-  const Nk: u8 = 4;
-  const Nr: u8 = 10;
+  const AES_KEYLEN: usize = 16;
+  const AES_keyExpSize: usize = 176;
+  const Nk: usize = 4;
+  const Nr: usize = 10;
 
   // --------- typedefs ---------
   // Block size words
@@ -76,7 +76,7 @@ pub mod aes {
     0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
     0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16,
   ];
-  fn sBox(byte_in: u8) -> u8 {
+  fn sBox(byte_in: usize) -> u8 {
     return sbox[byte_in];
   }
 
@@ -99,7 +99,7 @@ pub mod aes {
     0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61,
     0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d,
   ];
-  fn invSBox(byte_in: u8) -> u8 {
+  fn invSBox(byte_in: usize) -> u8 {
     return inv_sbox[byte_in];
   }
 
@@ -137,30 +137,27 @@ pub mod aes {
     };
   }
   fn gfMult(b: u8, c: u8) -> u8 {
-    let out: u8 = 0x00;
+    let mut out: u8 = 0x00;
 
     // Setup mask to extract the bit that we are working on
-    let temp_mask: u8 = 0x01;
+    let masks: [u8; 8] = [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80];
 
     // Setup byte to hold the result as we iterate xTimes
     let mut temp_byte: u8;
 
     // Loop through every bit in c
-    for c_idx in (0..8) {
+    for (c_idx, mask) in masks.iter().enumerate() {
       // Check if that bit is set
-      if (c & temp_mask) {
+      if (c & mask) > 0 {
         // Run xTimes based on the log of the current bit index that we are extracting
         temp_byte = b;
-        for x in (0..c_idx) {
+        for _ in 0..c_idx {
           temp_byte = xTimes(temp_byte);
         }
 
         // GF add the result to the output
         out = gfAdd(out, temp_byte);
       }
-
-      // Shift mask to grab next bit
-      temp_mask = temp_mask << 1;
     }
     return out;
   }
