@@ -3,18 +3,12 @@ Simple AES library written for self-educational purposes.
 
 ## Building
 ### Requirements
-* CMake 3.15 or better
-* A C11 or better compiler
-### Configure Build Enviornment:
+
+### Build Library:
 ```
-mkdir build
-cmake --fresh -B build -S .
+cargo build
 ```
 ### Build Main:
-```
-cmake --build build
-```
+TODO: Update after switch to rust
 ### Execute Main Sample Tests:
-```
-./build/apps/main 1
-```
+TODO: Update after switch to rust
