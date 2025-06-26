@@ -9,7 +9,7 @@
 int aes(const uint8_t key[AES_KEYLEN], block_t data, const bool is_encrypt)
 {
   // Generate round keys
-  uint8_t round_keys[4*(Nr+1)][WSIZE];  
+  uint8_t round_keys[4*(Nr+1)][WSIZE];
   if (keyExpansion(key, round_keys) == -1)
   {
     printf("Key Expansion Failed!!");
@@ -19,7 +19,7 @@ int aes(const uint8_t key[AES_KEYLEN], block_t data, const bool is_encrypt)
   for (int r = 0; r < Nr+1; r++)
     {
       printf("round: %d,\t roundKey: ", r);
-      for (int kl = 0; kl < AES_KEYLEN/WSIZE; kl++) 
+      for (int kl = 0; kl < AES_KEYLEN/WSIZE; kl++)
       {
         for (int b_idx = 0; b_idx < WSIZE; b_idx++)
         {
@@ -50,15 +50,15 @@ int aes(const uint8_t key[AES_KEYLEN], block_t data, const bool is_encrypt)
   return 0;
 }
 
-// ------------------------------------------ Key Expansion ------------------------------------------ 
+// ------------------------------------------ Key Expansion ------------------------------------------
 // Key is expanded using the AES key schedule into round+1 keys
 // See FIPS PUB 197 Section 5.2
 int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE])
 {
   // Round constant, left fixed though could be computed
   static const uint8_t Rcon[10][WSIZE]= {
-    {0x01, 0x00, 0x00, 0x00}, 
-    {0x02, 0x00, 0x00, 0x00}, 
+    {0x01, 0x00, 0x00, 0x00},
+    {0x02, 0x00, 0x00, 0x00},
     {0x04, 0x00, 0x00, 0x00},
     {0x08, 0x00, 0x00, 0x00},
     {0x10, 0x00, 0x00, 0x00},
@@ -97,7 +97,7 @@ int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE])
     }
     else if ((Nk > 6) && (i%Nk == 4))
     {
-      subWord(sub_rot_word); 
+      subWord(sub_rot_word);
       for (int w_idx = 0; w_idx < WSIZE; w_idx++)
         w[i][w_idx] = (sub_rot_word[w_idx]);
     }
@@ -143,7 +143,7 @@ void subWord (uint8_t word_in[WSIZE])
 int cipher(block_t state, uint8_t w[4*(Nr+1)][WSIZE])
 {
   // Setup four word variable to handle round key
-  uint8_t round_key[4][WSIZE]; 
+  uint8_t round_key[4][WSIZE];
   for (int k_idx = 0; k_idx < 4; k_idx++)
     for (int w_idx = 0; w_idx < WSIZE; w_idx++)
       round_key[k_idx][w_idx] = w[k_idx][w_idx];
@@ -185,7 +185,7 @@ void subBytes(block_t state)
 
 // ShiftRows()
 // Bytes in the last three rows of the state are cyclically shifted
-void shiftRows(block_t state) 
+void shiftRows(block_t state)
 {
   uint8_t temp_byte;
   for (int row = 1; row < WSIZE; row++)
@@ -211,7 +211,7 @@ void shiftRows(block_t state)
 // [s'_2c] = [01 01 02 03] [s_2c]
 // [s'_3c] = [03 01 01 02] [s_3c]
 // This is Galois Field Matrix Multiplication, so the result is non-obvious.
-void mixColumns(block_t state) 
+void mixColumns(block_t state)
 {
   uint8_t temp_col[4];
   for (int col = 0; col < Nb; col++)
@@ -232,7 +232,7 @@ void mixColumns(block_t state)
 // A Round Key is applied to the state by applying a bitwise XOR operation.
 // Each round key consists of four words, each of which is applied to a column of the state as follows:
 // [s'_0c, s'_1c, s'_2c, s'_3c] = [s_0c, s_1c, s_2c, s_3c] ⊕ [w_(4*round+c)]
-void addRoundKey(block_t state, uint8_t round_key[4][WSIZE]) 
+void addRoundKey(block_t state, uint8_t round_key[4][WSIZE])
 {
   for (int i = 0; i < 4; i++)
   {
@@ -245,13 +245,13 @@ void addRoundKey(block_t state, uint8_t round_key[4][WSIZE])
 }
 
 
-// ------------------------------------------ Inverse Cipher ------------------------------------------ 
+// ------------------------------------------ Inverse Cipher ------------------------------------------
 // inverse Cipher (Decryption)
 // Takes in initial state and round keys... outputs final state by ref.
 int invCipher(block_t state, uint8_t w[4*(Nr+1)][WSIZE])
 {
   // Setup four word variable to handle round key
-  uint8_t round_key[4][WSIZE]; 
+  uint8_t round_key[4][WSIZE];
   for (int k_idx = 0; k_idx < 4; k_idx++)
     for (int w_idx = 0; w_idx < WSIZE; w_idx++)
       round_key[k_idx][w_idx] = w[(4*Nr) + k_idx][w_idx];
@@ -293,7 +293,7 @@ void invSubBytes(block_t state)
 
 // InvShiftRows()
 // Bytes in the last three rows of the state are cyclically shifted in the opposite direction
-void invShiftRows(block_t state) 
+void invShiftRows(block_t state)
 {
   uint8_t temp_byte;
   for (int row = 1; row < WSIZE; row++)
@@ -319,7 +319,7 @@ void invShiftRows(block_t state)
 // [s'_2c] = [01 01 02 03] [s_2c]
 // [s'_3c] = [03 01 01 02] [s_3c]
 // This is Galois Field Matrix Multiplication, so the result is non-obvious.
-void invMixColumns(block_t state) 
+void invMixColumns(block_t state)
 {
   uint8_t temp_col[4];
   for (int col = 0; col < Nb; col++)
@@ -332,12 +332,12 @@ void invMixColumns(block_t state)
     state[1][col] = gfMult(0x09,temp_col[0]) ^ gfMult(0x0e,temp_col[1]) ^ gfMult(0x0b,temp_col[2]) ^ gfMult(0x0d,temp_col[3]);
     state[2][col] = gfMult(0x0d,temp_col[0]) ^ gfMult(0x09,temp_col[1]) ^ gfMult(0x0e,temp_col[2]) ^ gfMult(0x0b,temp_col[3]);
     state[3][col] = gfMult(0x0b,temp_col[0]) ^ gfMult(0x0d,temp_col[1]) ^ gfMult(0x09,temp_col[2]) ^ gfMult(0x0e,temp_col[3]);
-  } 
+  }
   return;
 }
 
 
-// ------------------------------------------ Common Functions ------------------------------------------ 
+// ------------------------------------------ Common Functions ------------------------------------------
 
 // S-box
 // A substitution table used by AES over many of its constituent functions
@@ -412,12 +412,12 @@ inline uint8_t gfAdd(uint8_t a, uint8_t b)
 // 2) The resulting polynomial is reduced modulo the following polynomial (x^8 + x^4 + x^3 + x + 1).
 // If one considers the case where the second polynomial, c, is x the following equation can be used to compute the result
 //   xTimes(b) = {{b6,b5,b4,b3,b2,b1,b0,0}                     if b7=0
-//               {{b6,b5,b4,b3,b2,b1,b0,0} ⊕ {0,0,0,1,1,0,1,1} if b7=1 
+//               {{b6,b5,b4,b3,b2,b1,b0,0} ⊕ {0,0,0,1,1,0,1,1} if b7=1
 // Then we can calculate any power of 2^n by repeating that function x times
 // Finally, we can use that to compute the multiplication of any number, by splitting that number into the gf addition of any bit set in the byte
 inline uint8_t xTimes(uint8_t b)
 {
-  return ((b >> 7) == 0x00) ? 
+  return ((b >> 7) == 0x00) ?
          (b << 1) :
          ((b << 1) ^ (0x1b));
 }

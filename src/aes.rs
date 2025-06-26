@@ -1,42 +1,137 @@
 // AES Cipher Functionality
 // Devin Bidstrup 6/25/24
 
+use std::io;
+
 pub mod aes {
   // --------- defs ---------
   const AES_BLOCKLEN: usize = 16; // Block length in bytes - AES is 128b block only
-  const Nb: usize = 84; // Block length in 32 bit words
+  const NB: usize = 84; // Block length in 32 bit words
   const IV_LENGTH: usize = 96; // Only allow 96-bit IVs
   const WSIZE: usize = 4; // Size of a word in bytes
 
   // USE FOR AES-256
   //      const AES_KEYLEN:usize     = 32;
-  //      const AES_keyExpSize:usize = 240;
+  //      const AES_KEY_EXP_SIZE:usize = 240;
   //      const Nk:usize             = 8;
-  //      const Nr:usize             = 14;
+  //      const NR:usize             = 14;
   // USE FOR AES-192
   //      const AES_KEYLEN:usize     = 24;
-  //      const AES_keyExpSize:usize = 208;
-  //      const Nk:usize             = 6;
-  //      const Nr:usize             = 12;
+  //      const AES_KEY_EXP_SIZE:usize = 208;
+  //      const NK:usize             = 6;
+  //      const NR:usize             = 12;
   // USE FOR AES-128
   const AES_KEYLEN: usize = 16;
-  const AES_keyExpSize: usize = 176;
-  const Nk: usize = 4;
-  const Nr: usize = 10;
+  const AES_KEY_EXP_SIZE: usize = 176;
+  const NK: usize = 4;
+  const NR: usize = 10;
 
   // --------- typedefs ---------
   // Block size words
-  type Block = [u8; WSIZE * Nb];
-
-  // --------- Functions ---------
+  type Block = [u8; WSIZE * NB];
+  type Word = [u8; WSIZE];
 
   // ------------------------------------------ AES Top ------------------------------------------
-  // int aes(const uint8_t key[AES_KEYLEN], block_t data, const bool is_encrypt);
-  //
-  // // ------------------------------------------ Key Expansion ------------------------------------------
-  // int keyExpansion(const uint8_t key[AES_KEYLEN], uint8_t w[4*(Nr+1)][WSIZE]);
-  // void rotWord (uint8_t word_in[WSIZE]);
-  // void subWord (uint8_t word_in[WSIZE]);
+  // Takes in key, dervies round keys, and then either decrypts or encrypts
+  pub fn aes(key: [u8; AES_KEYLEN], mut data: Block, is_encrypt: bool) {
+    // Generate round keys
+    let mut round_keys: [Word; 4 * (NR + 1)] = [[0; WSIZE]; 4 * (NR + 1)];
+    key_expansion(key, &mut round_keys);
+
+    // Perform encrypt / decrypt
+    // if (is_encrypt)
+    // {
+    //   if (cipher(data, round_keys) == -1)
+    //   {
+    //     println!("Cipher Failed!!");
+    //     return -1;
+    //   }
+    // }
+    // else
+    // {
+    //   if(invCipher(data, round_keys) == -1)
+    //   {
+    //     println!("Inverse Cipher Failed!!");
+    //   }
+    // }
+  }
+
+  // ------------------------------------------ Key Expansion ------------------------------------------
+  // Key is expanded using the AES key schedule into round+1 keys
+  // See FIPS PUB 197 Section 5.2
+  fn key_expansion(key: [u8; AES_KEYLEN], w: &mut [Word; 4 * (NR + 1)]) {
+    // Round constant, left fixed though could be computed
+    const RCON: [Word; 10] = [
+      [0x01, 0x00, 0x00, 0x00],
+      [0x02, 0x00, 0x00, 0x00],
+      [0x04, 0x00, 0x00, 0x00],
+      [0x08, 0x00, 0x00, 0x00],
+      [0x10, 0x00, 0x00, 0x00],
+      [0x20, 0x00, 0x00, 0x00],
+      [0x40, 0x00, 0x00, 0x00],
+      [0x80, 0x00, 0x00, 0x00],
+      [0x1B, 0x00, 0x00, 0x00],
+      [0x36, 0x00, 0x00, 0x00],
+    ];
+
+    // First Nk words are generated from the key itself
+    for word_idx in 0..NK {
+      for byte_idx in 0..WSIZE {
+        w[word_idx][byte_idx] = key[(word_idx * WSIZE) + byte_idx];
+      }
+    }
+
+    // Every subsequent word w[i] is generated recursively from the
+    // preceding word, w[i−1], and the word Nk positions earlier, w[i−Nk] as follows
+    // • If i is a multiple of Nk, then w[i] = w[i−Nk] ⊕ subWord(rotWord(w[i−1])) ⊕ Rcon[i/Nk].
+    // • For AES-256, if i + 4 is a multiple of 8, then w[i] = w[i−Nk] ⊕ subWord(w[i−1]).
+    // • For all other cases, w[i] = w[i−Nk] ⊕ w[i−1].
+    let mut sub_rot_word: Word = [0; WSIZE];
+    for word_idx in NK..(4 * (NR + 1)) {
+      for byte_idx in 0..WSIZE {
+        sub_rot_word[byte_idx] = w[word_idx - 1][byte_idx];
+      }
+      if word_idx % NK == 0 {
+       // dbg!(word_idx);
+        //println!("{:x}", u32::from_be_bytes(sub_rot_word));
+        rot_word(&mut sub_rot_word);
+        //println!("{:x}", u32::from_be_bytes(sub_rot_word));
+        sub_word(&mut sub_rot_word);
+        //println!("{:x}", u32::from_be_bytes(sub_rot_word));
+        //println!("{:x}", u32::from_be_bytes(RCON[(word_idx / NK)- 1]));
+        for byte_idx in 0..WSIZE {
+          sub_rot_word[byte_idx] = sub_rot_word[byte_idx] ^ RCON[(word_idx / NK) - 1][byte_idx];
+        }
+        //println!("{:x}", u32::from_be_bytes(sub_rot_word));
+      } else if (NK > 6) && (word_idx % NK == 4) {
+        sub_word(&mut sub_rot_word);
+      }
+      for byte_idx in 0..WSIZE {
+        w[word_idx][byte_idx] = (w[word_idx - NK][byte_idx]) ^ (sub_rot_word[byte_idx]);
+      }
+    }
+  }
+
+  // ROTWORD for key expansion
+  // [a0, a1, a2, a3] --> [a1, a2, a3, a0]
+  fn rot_word(word_in: &mut Word) {
+    let temp_byte: u8 = word_in[0];
+    for byte_idx in 0..WSIZE-1 {
+      word_in[byte_idx] = word_in[byte_idx + 1];
+    }
+    word_in[WSIZE - 1] = temp_byte;
+    return;
+  }
+
+  // SUBWORD for key expansion
+  // Takes the SBox of all of the elements of the word
+  fn sub_word(word_in: &mut Word) {
+    for byte_idx in 0..WSIZE {
+      word_in[byte_idx] = sbox(word_in[byte_idx]);
+    }
+    return;
+  }
+
   //
   // // ------------------------------------------ Cipher ------------------------------------------
   // int  cipher     (block_t state, uint8_t w[4*(Nr+1)][WSIZE]);
@@ -58,7 +153,7 @@ pub mod aes {
   // S-box
   // A substitution table used by AES over many of its constituent functions
   // Derivation from the constants is given in FIPS PUB 197 Section 5.1.1
-  const sbox: [u8; 256] = [
+  const SBOX: [u8; 256] = [
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
     0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
     0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15,
@@ -76,12 +171,12 @@ pub mod aes {
     0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
     0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16,
   ];
-  fn sBox(byte_in: usize) -> u8 {
-    return sbox[byte_in];
+  fn sbox(byte_in: u8) -> u8 {
+    return SBOX[usize::from(byte_in)];
   }
 
   // Inverse S-box
-  const inv_sbox: [u8; 256] = [
+  const INV_SBOX: [u8; 256] = [
     0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb,
     0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87, 0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb,
     0x54, 0x7b, 0x94, 0x32, 0xa6, 0xc2, 0x23, 0x3d, 0xee, 0x4c, 0x95, 0x0b, 0x42, 0xfa, 0xc3, 0x4e,
@@ -99,8 +194,8 @@ pub mod aes {
     0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61,
     0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d,
   ];
-  fn invSBox(byte_in: usize) -> u8 {
-    return inv_sbox[byte_in];
+  fn inv_sbox(byte_in: u8) -> u8 {
+    return INV_SBOX[usize::from(byte_in)];
   }
 
   // GF Primer
@@ -114,7 +209,7 @@ pub mod aes {
   //  (1+0)mod2 = 1
   //  (1+1)mod2 = 0
   // Resulting in the bitwise XOR of the bytes
-  fn gfAdd(a: u8, b: u8) -> u8 {
+  fn gf_add(a: u8, b: u8) -> u8 {
     return a ^ b;
   }
 
@@ -129,14 +224,14 @@ pub mod aes {
   // Then we can calculate any power of 2^n by repeating that function x times
   // Finally, we can use that to compute the multiplication of any number, by splitting that number into the gf addition
   // of any bit set in the byte
-  fn xTimes(b: u8) -> u8 {
+  fn xtimes(b: u8) -> u8 {
     return if (b >> 7) == 0x00 {
       b << 1
     } else {
       (b << 1) ^ (0x1b)
     };
   }
-  fn gfMult(b: u8, c: u8) -> u8 {
+  fn gf_mult(b: u8, c: u8) -> u8 {
     let mut out: u8 = 0x00;
 
     // Setup mask to extract the bit that we are working on
@@ -152,13 +247,67 @@ pub mod aes {
         // Run xTimes based on the log of the current bit index that we are extracting
         temp_byte = b;
         for _ in 0..c_idx {
-          temp_byte = xTimes(temp_byte);
+          temp_byte = xtimes(temp_byte);
         }
 
         // GF add the result to the output
-        out = gfAdd(out, temp_byte);
+        out = gf_add(out, temp_byte);
       }
     }
     return out;
+  }
+
+  // ------------------------------------------ Unit Tests ------------------------------------------
+  #[test]
+  fn test_key_exp() {
+    // if AES_KEYLEN == 16 {
+    println!("############################\n128 bit AES Key Expansion Test\n############################\n");
+    let key: [u8; AES_KEYLEN] = [
+      0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f,
+      0x3c,
+    ];
+    let exp_round_keys: [u32; 4 * (NR + 1)] = [
+      0x2b7e1516, 0x28aed2a6, 0xabf71588, 0x09cf4f3c, 0xa0fafe17, 0x88542cb1, 0x23a33939,
+      0x2a6c7605, 0xf2c295f2, 0x7a96b943, 0x5935807a, 0x7359f67f, 0x3d80477d, 0x4716fe3e,
+      0x1e237e44, 0x6d7a883b, 0xef44a541, 0xa8525b7f, 0xb671253b, 0xdb0bad00, 0xd4d1c6f8,
+      0x7c839d87, 0xcaf2b8bc, 0x11f915bc, 0x6d88a37a, 0x110b3efd, 0xdbf98641, 0xca0093fd,
+      0x4e54f70e, 0x5f5fc9f3, 0x84a64fb2, 0x4ea6dc4f, 0xead27321, 0xb58dbad2, 0x312bf560,
+      0x7f8d292f, 0xac7766f3, 0x19fadc21, 0x28d12941, 0x575c006e, 0xd014f9a8, 0xc9ee2589,
+      0xe13f0cc8, 0xb6630ca6,
+    ];
+
+    // }
+    // else if AES_KEYLEN == 24 {
+    //   println!("############################\n192 bit AES Key Expansion Test\n############################\n");
+    //   let key_in: [u8; AES_KEYLEN] = [0x8e, 0x73, 0xb0, 0xf7, 0xda, 0x0e, 0x64, 0x52, 0xc8, 0x10, 0xf3, 0x2b,
+    //                               0x80, 0x90, 0x79, 0xe5, 0x62, 0xf8, 0xea, 0xd2, 0x52, 0x2c, 0x6b, 0x7b];
+    // }
+    // else {
+    // println!("############################\n256 bit AES Key Expansion Test\n############################\n");
+    // let key_in: [u8; AES_KEYLEN] = [0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
+    //                               0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4];
+    // }
+
+    let mut round_keys: [Word; 4 * (NR + 1)] = [[0; WSIZE]; 4 * (NR + 1)];
+    key_expansion(key, &mut round_keys);
+
+    println!("---------------------Check key expansion---------------------\n");
+    let mut is_ok: bool = true;
+    for round_idx in 0..NR + 1 {
+      println!("\n round: {round_idx},");
+      println!("ACTUAL,\t\t EXPECTED");
+      for word_idx in 0..AES_KEYLEN / WSIZE {
+        let rk = u32::from_be_bytes(round_keys[(4 * round_idx) + word_idx]);
+        let ek = exp_round_keys[(4 * round_idx) + word_idx];
+        println!("{rk:>2x}, \t {ek:>2x}");
+        if rk != ek {
+          is_ok = false;
+          println!("\t MISSMATCH")
+        }
+      }
+    }
+    println!("---------------------\n");
+
+    assert_eq!(is_ok, true);
   }
 } // pub mod aes
