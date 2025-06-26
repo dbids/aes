@@ -2,9 +2,9 @@
 // Devin Bidstrup 6/25/24
 
 mod aes128_const {
-  pub const KEYLEN: usize = 16;
-  pub const NR: usize = 10;
-  pub const NK: usize = KEYLEN / 4;
+  pub const KEYLEN: usize = 16;     // Key Length in Bytes
+  pub const NR: usize = 10;         // Number of rounds of the AES Cipher
+  pub const NK: usize = KEYLEN / 4; // Size of round key in 32-bit words
 }
 
 mod aes192_const {
@@ -28,39 +28,31 @@ pub mod aes {
   use crate::aes::aes256_const::*;
 
   // --------- defs ---------
-  const AES_BLOCKLEN: usize = 16; // Block length in bytes - AES is 128b block only
-  const NB: usize = 84; // Block length in 32 bit words
-  const IV_LENGTH: usize = 96; // Only allow 96-bit IVs
-  const WSIZE: usize = 4; // Size of a word in bytes
+  const WORDLEN: usize = 4; // Size of a word in bytes
+  const BLOCKLEN: usize = 16; // Block length in bytes - AES is 128b block only
+  const NB: usize = BLOCKLEN/WORDLEN; // Block length in 32 bit words
 
   // --------- typedefs ---------
   // Block size words
-  type Block = [u8; WSIZE * NB];
-  type Word = [u8; WSIZE];
+  type Block = [u8; BLOCKLEN];
+  type Word = [u8; WORDLEN];
 
   // ------------------------------------------ AES Top ------------------------------------------
   // Takes in key, dervies round keys, and then either decrypts or encrypts
-  pub fn aes(key: [u8; KEYLEN], mut data: Block, is_encrypt: bool) {
+  pub fn aes(key: [u8; KEYLEN], data: &mut Block, is_encrypt: bool) {
     // Generate round keys
-    let mut round_keys: [Word; 4 * (NR + 1)] = [[0; WSIZE]; 4 * (NR + 1)];
+    let mut round_keys: [Word; 4 * (NR + 1)] = [[0; WORDLEN]; 4 * (NR + 1)];
     key_expansion(key, &mut round_keys);
 
     // Perform encrypt / decrypt
-    // if (is_encrypt)
-    // {
-    //   if (cipher(data, round_keys) == -1)
-    //   {
-    //     println!("Cipher Failed!!");
-    //     return -1;
-    //   }
-    // }
-    // else
-    // {
-    //   if(invCipher(data, round_keys) == -1)
-    //   {
-    //     println!("Inverse Cipher Failed!!");
-    //   }
-    // }
+    if is_encrypt
+    {
+      cipher(data, round_keys);
+    }
+    else
+    {
+      inv_cipher(data, round_keys);
+    }
   }
 
   // ------------------------------------------ Key Expansion ------------------------------------------
@@ -83,8 +75,8 @@ pub mod aes {
 
     // First Nk words are generated from the key itself
     for word_idx in 0..NK {
-      for byte_idx in 0..WSIZE {
-        rkeys[word_idx][byte_idx] = key[(word_idx * WSIZE) + byte_idx];
+      for byte_idx in 0..WORDLEN {
+        rkeys[word_idx][byte_idx] = key[(word_idx * WORDLEN) + byte_idx];
       }
     }
 
@@ -93,21 +85,21 @@ pub mod aes {
     // • If i is a multiple of Nk, then w[i] = w[i−Nk] ⊕ subWord(rotWord(w[i−1])) ⊕ Rcon[i/Nk].
     // • For AES-256, if i + 4 is a multiple of 8, then w[i] = w[i−Nk] ⊕ subWord(w[i−1]).
     // • For all other cases, w[i] = w[i−Nk] ⊕ w[i−1].
-    let mut sub_rot_word: Word = [0; WSIZE];
+    let mut sub_rot_word: Word = [0; WORDLEN];
     for word_idx in NK..(4 * (NR + 1)) {
-      for byte_idx in 0..WSIZE {
+      for byte_idx in 0..WORDLEN {
         sub_rot_word[byte_idx] = rkeys[word_idx - 1][byte_idx];
       }
       if word_idx % NK == 0 {
         rot_word(&mut sub_rot_word);
         sub_word(&mut sub_rot_word);
-        for byte_idx in 0..WSIZE {
+        for byte_idx in 0..WORDLEN {
           sub_rot_word[byte_idx] = sub_rot_word[byte_idx] ^ RCON[(word_idx / NK) - 1][byte_idx];
         }
       } else if (NK > 6) && (word_idx % NK == 4) {
         sub_word(&mut sub_rot_word);
       }
-      for byte_idx in 0..WSIZE {
+      for byte_idx in 0..WORDLEN {
         rkeys[word_idx][byte_idx] = (rkeys[word_idx - NK][byte_idx]) ^ (sub_rot_word[byte_idx]);
       }
     }
@@ -117,38 +109,206 @@ pub mod aes {
   // [a0, a1, a2, a3] --> [a1, a2, a3, a0]
   fn rot_word(word_in: &mut Word) {
     let temp_byte: u8 = word_in[0];
-    for byte_idx in 0..WSIZE - 1 {
+    for byte_idx in 0..WORDLEN - 1 {
       word_in[byte_idx] = word_in[byte_idx + 1];
     }
-    word_in[WSIZE - 1] = temp_byte;
+    word_in[WORDLEN - 1] = temp_byte;
     return;
   }
 
   // SUBWORD for key expansion
   // Takes the SBox of all of the elements of the word
   fn sub_word(word_in: &mut Word) {
-    for byte_idx in 0..WSIZE {
+    for byte_idx in 0..WORDLEN {
       word_in[byte_idx] = sbox(word_in[byte_idx]);
     }
     return;
   }
 
   //
-  // // ------------------------------------------ Cipher ------------------------------------------
-  // int  cipher     (block_t state, uint8_t w[4*(Nr+1)][WSIZE]);
-  // void subBytes   (block_t state);
-  // void shiftRows  (block_t state);
-  // void mixColumns (block_t state);
-  // void addRoundKey(block_t state, uint8_t fourW[4][WSIZE]);
+  // ------------------------------------------ Cipher ------------------------------------------
+  // Forward Cipher (Encryption)
+  // Takes in initial state and round keys... outputs final state by ref.
+  fn cipher(state: &mut Block, rkeys: [Word; 4 * (NR + 1)])
+  {
+    // Setup four word variable to handle round key
+    let mut round_key: [Word; NK] = [[0; WORDLEN]; NK];
+    for word_idx in 0..NK {
+      for byte_idx in 0..WORDLEN {
+        round_key[word_idx][byte_idx] = rkeys[word_idx][byte_idx];
+      }
+    }
+
+    add_round_key(state, round_key);
+    for round_idx in 1..NR
+    {
+      sub_bytes(state);
+      shift_rows(state);
+      mix_columns(state);
+      for word_idx in 0..NK {
+        for byte_idx in 0..WORDLEN {
+          round_key[word_idx][byte_idx] = rkeys[(4*round_idx) + word_idx][byte_idx];
+        }
+      }
+      add_round_key(state, round_key);
+    }
+      sub_bytes(state);
+      shift_rows(state);
+      for word_idx in 0..NK {
+        for byte_idx in 0..WORDLEN {
+          round_key[word_idx][byte_idx] = rkeys[(4*NR) + word_idx][byte_idx];
+        }
+      }
+      add_round_key(state, round_key);
+  }
+
+  // SubBytes()
+  // Equivalent to an SBox lookup of every byte in the state
+  fn sub_bytes(state: &mut Block)
+  {
+    for byte_idx in 0..BLOCKLEN {
+      sbox(state[byte_idx]);
+    }
+  }
+
+  // ShiftRows()
+  // Bytes in the last three rows of the state are cyclically shifted
+  // [00 01 02 03] => [00 01 02 03]
+  // [04 05 06 07] => [05 06 07 04]
+  // [08 09 10 11] => [10 11 08 09]
+  // [12 13 14 15] => [15 12 13 14]
+  fn shift_rows(state: &mut Block)
+  {
+    let mut temp_byte: u8;
+    for row in 1..NB {
+      // Shift start to end once in row 1, twice in row 2, and thrice in row 3
+      for _ in 0..row {
+        temp_byte = state[row * WORDLEN];
+        for col in 0..WORDLEN-1 {
+          state[(row * WORDLEN) + col] = state[(row * WORDLEN) + col + 1];
+        }
+        state[(row * WORDLEN) + (WORDLEN - 1)] = temp_byte;
+      }
+    }
+  }
+
+  // MixColumns()
+  // Multiplies each of the columns of the state by a fixed matrix
+  // [s'_0c] = [02 03 01 01] [s_0c]
+  // [s'_1c] = [01 02 03 01] [s_1c]
+  // [s'_2c] = [01 01 02 03] [s_2c]
+  // [s'_3c] = [03 01 01 02] [s_3c]
+  // This is Galois Field Matrix Multiplication, so the result is non-obvious.
+  fn mix_columns(state: &mut Block)
+  {
+    for col in 0..WORDLEN {
+      let mut temp_col: Word = [0; WORDLEN];
+      for row in 0..NB {
+        temp_col[row] = state[col + (row*WORDLEN)];
+      }
+      state[col] = gf_mult(2,temp_col[0]) ^ gf_mult(3,temp_col[1]) ^ temp_col[2]           ^ temp_col[3];
+      state[col + WORDLEN] = temp_col[0]           ^ gf_mult(2,temp_col[1]) ^ gf_mult(3,temp_col[2]) ^ temp_col[3];
+      state[col + (WORDLEN*2)] = temp_col[0]           ^ temp_col[1]           ^ gf_mult(2,temp_col[2]) ^ gf_mult(3,temp_col[3]);
+      state[col + (WORDLEN*3)] = gf_mult(3,temp_col[0]) ^ temp_col[1]           ^ temp_col[2]           ^ gf_mult(2,temp_col[3]);
+    }
+  }
+
+  // AddRoundKey()
+  // A Round Key is applied to the state by applying a bitwise XOR operation.
+  // Each round key consists of four words, each of which is applied to a column of the state as follows:
+  // [s'_0c, s'_1c, s'_2c, s'_3c] = [s_0c, s_1c, s_2c, s_3c] ⊕ [w_(4*round+c)]
+  fn add_round_key(state: &mut Block, round_key: [Word; NK])
+  {
+    for byte_idx in 0..BLOCKLEN {
+      state[byte_idx] = gf_add(state[byte_idx], round_key[byte_idx/WORDLEN][byte_idx%WORDLEN]);
+    }
+  }
   //
-  //
-  // // ------------------------------------------ Inverse Cipher ------------------------------------------
-  // int  invCipher    (block_t state, uint8_t w[4*(Nr+1)][WSIZE]);
-  // void invSubBytes  (block_t state);
-  // void invShiftRows (block_t state);
-  // void invMixColumns(block_t state);
-  //
-  //
+  // ------------------------------------------ Inverse Cipher ------------------------------------------
+  // inverse Cipher (Decryption)
+  // Takes in initial state and round keys... outputs final state by ref.
+  fn inv_cipher(state: &mut Block, rkeys: [Word; 4 * (NR + 1)])
+  {
+    // Setup four word variable to handle round key
+    let mut round_key: [Word; NK] = [[0; WORDLEN]; NK];
+    for word_idx in 0..NK {
+      for byte_idx in 0..WORDLEN {
+        round_key[word_idx][byte_idx] = rkeys[(4*NR) + word_idx][byte_idx];
+      }
+    }
+
+    add_round_key(state, round_key);
+    for round_idx in (0..NR-1).rev() {
+      inv_shift_rows(state);
+      inv_sub_bytes(state);
+      for word_idx in 0..NK {
+        for byte_idx in 0..WORDLEN {
+          round_key[word_idx][byte_idx] = rkeys[(4*round_idx) + word_idx][byte_idx];
+        }
+      }
+      add_round_key(state, round_key);
+      inv_mix_columns(state);
+    }
+    inv_shift_rows(state);
+    inv_sub_bytes(state);
+    for word_idx in 0..NK {
+      for byte_idx in 0..WORDLEN {
+        round_key[word_idx][byte_idx] = rkeys[word_idx][byte_idx];
+      }
+    }
+    add_round_key(state, round_key);
+  }
+
+  // InvSubBytes()
+  // Equivalent to an invSBox lookup of every byte in the state
+  fn inv_sub_bytes(state: &mut Block)
+  {
+    for byte_idx in 0..BLOCKLEN {
+      inv_sbox(state[byte_idx]);
+    }
+  }
+
+  // InvShiftRows()
+  // Bytes in the last three rows of the state are cyclically shifted in the opposite direction
+  // [00 01 02 03] => [00 01 02 03]
+  // [04 05 06 07] => [07 04 05 06]
+  // [08 09 10 11] => [10 11 08 09]
+  // [12 13 14 15] => [13 14 15 12]
+  fn inv_shift_rows(state: &mut Block)
+  {
+    let mut temp_byte: u8;
+    for row in 1..NB {
+      // Shift start to end once in row 1, twice in row 2, and thrice in row 3
+      for _ in 0..row {
+        temp_byte = state[(row * WORDLEN) + (WORDLEN - 1)];
+        for col in (0..WORDLEN-1).rev() {
+          state[(row * WORDLEN) + col] = state[(row * WORDLEN) + col - 1];
+        }
+        state[row * WORDLEN] = temp_byte;
+      }
+    }
+  }
+
+  // InvMixColumns()
+  // Multiplies each of the columns of the state by a fixed matrix
+  // [s'_0c] = [02 03 01 01] [s_0c]
+  // [s'_1c] = [01 02 03 01] [s_1c]
+  // [s'_2c] = [01 01 02 03] [s_2c]
+  // [s'_3c] = [03 01 01 02] [s_3c]
+  // This is Galois Field Matrix Multiplication, so the result is non-obvious.
+  fn inv_mix_columns(state: &mut Block)
+  {
+    for col in 0..WORDLEN {
+      let mut temp_col: Word = [0; WORDLEN];
+      for row in 0..NB {
+        temp_col[row] = state[col + (row*WORDLEN)];
+      }
+      state[col] = gf_mult(0x0e,temp_col[0]) ^ gf_mult(0x0b,temp_col[1]) ^ gf_mult(0x0d,temp_col[2]) ^ gf_mult(0x09,temp_col[3]);
+      state[col + WORDLEN] = gf_mult(0x09, temp_col[0]) ^ gf_mult(0x0e,temp_col[1]) ^ gf_mult(0x0b,temp_col[2]) ^ gf_mult(0x0d, temp_col[3]);
+      state[col + (WORDLEN*2)] = gf_mult(0x0d, temp_col[0]) ^ gf_mult(0x09, temp_col[1]) ^ gf_mult(0x0e,temp_col[2]) ^ gf_mult(0x0b,temp_col[3]);
+      state[col + (WORDLEN*3)] = gf_mult(0x0b,temp_col[0]) ^ gf_mult(0x0d, temp_col[1]) ^ gf_mult(0x09, temp_col[2]) ^ gf_mult(0x0e,temp_col[3]);
+    }
+  }
   // ------------------------------------------ Common Functions ------------------------------------------
 
   // S-box
@@ -266,7 +426,7 @@ pub mod aes {
     let mut exp_round_keys: [u32; 4 * (NR + 1)] = [0; 4 * (NR + 1)];
     #[cfg(AES_KEYLEN = "128")]
     {
-      println!("############################\n128 bit AES Key Expansion Test\n############################\n");
+      println!("############################\n128 bit AES Key Expansion Test\n############################");
       key = [
         0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f,
         0x3c,
@@ -283,7 +443,7 @@ pub mod aes {
     }
     #[cfg(AES_KEYLEN = "192")]
     {
-      println!("############################\n192 bit AES Key Expansion Test\n############################\n");
+      println!("############################\n192 bit AES Key Expansion Test\n############################");
       key = [
         0x8e, 0x73, 0xb0, 0xf7, 0xda, 0x0e, 0x64, 0x52, 0xc8, 0x10, 0xf3, 0x2b, 0x80, 0x90, 0x79,
         0xe5, 0x62, 0xf8, 0xea, 0xd2, 0x52, 0x2c, 0x6b, 0x7b,
@@ -301,7 +461,7 @@ pub mod aes {
     }
     #[cfg(AES_KEYLEN = "256")]
     {
-      println!("############################\n256 bit AES Key Expansion Test\n############################\n");
+      println!("############################\n256 bit AES Key Expansion Test\n############################");
       key = [
         0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77,
         0x81, 0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14,
@@ -321,11 +481,11 @@ pub mod aes {
     }
 
     // Run test
-    let mut round_keys: [Word; 4 * (NR + 1)] = [[0; WSIZE]; 4 * (NR + 1)];
+    let mut round_keys: [Word; 4 * (NR + 1)] = [[0; WORDLEN]; 4 * (NR + 1)];
     key_expansion(key, &mut round_keys);
 
     // Determine result
-    println!("---------------------Check key expansion---------------------\n");
+    println!("---------------------Check key expansion---------------------");
     let mut is_ok: bool = true;
     for round_idx in 0..NR + 1 {
       println!("\n round: {round_idx},");
@@ -346,5 +506,24 @@ pub mod aes {
     println!("---------------------\n");
 
     assert_eq!(is_ok, true);
+  }
+
+  #[test]
+  fn test_cipher() {
+    println!("############################\n128b Key Cipher Test\n############################");
+    let mut plaintext:[u8; BLOCKLEN] = 0x3243f6a8885a308d313198a2e0370734_u128.to_be_bytes();
+    let exp_ciphertext: u128 = 0x03925841d_02dc09fb_dc118597_196a0b32;
+    let key: [u8; KEYLEN] = 0x2b7e151628aed2a6abf7158809cf4f3c_u128.to_be_bytes();
+
+    println!("---------------------Before:---------------------\n");
+    println!("plaintext: {:x}", u128::from_be_bytes(plaintext));
+    println!("key: {:x}", u128::from_be_bytes(key));
+    aes(key, &mut plaintext, true);
+
+    println!("---------------------After:---------------------\n");
+    let act_ciphertext = u128::from_be_bytes(plaintext);
+    println!("actual ciphertext: {:x}", act_ciphertext);
+    println!("expected ciphertext: {:x}\n", exp_ciphertext);
+    assert_eq!(exp_ciphertext, act_ciphertext)
   }
 } // pub mod aes
