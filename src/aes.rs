@@ -238,7 +238,7 @@ pub mod aes {
     }
 
     add_round_key(state, round_key);
-    for round_idx in (0..NR - 1).rev() {
+    for round_idx in (1..NR).rev() {
       inv_shift_rows(state);
       inv_sub_bytes(state);
       for word_idx in 0..NK {
