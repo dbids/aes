@@ -1,5 +1,5 @@
 // AES Cipher Functionality
-// Devin Bidstrup 6/25/24
+// Devin Bidstrup 6/25/25
 
 mod aes128_const {
   pub const KEYLEN: usize = 16; // Key Length in Bytes
@@ -39,17 +39,19 @@ pub mod aes {
 
   // ------------------------------------------ AES Top ------------------------------------------
   // Takes in key, dervies round keys, and then either decrypts or encrypts
-  pub fn aes(key: [u8; KEYLEN], data: &mut Block, is_encrypt: bool) {
+  pub fn aes(key: [u8; KEYLEN], data: &mut u128, is_encrypt: bool) {
     // Generate round keys
     let mut rkeys: [Word; 4 * (NR + 1)] = [[0; WORDLEN]; 4 * (NR + 1)];
     key_expansion(key, &mut rkeys);
 
     // Perform encrypt / decrypt
+    let mut temp_data: [u8; BLOCKLEN] = data.to_be_bytes();
     if is_encrypt {
-      cipher(data, rkeys);
+      cipher(&mut temp_data, rkeys);
     } else {
-      inv_cipher(data, rkeys);
+      inv_cipher(&mut temp_data, rkeys);
     }
+    *data = u128::from_be_bytes(temp_data);
   }
 
   // ------------------------------------------ Key Expansion ------------------------------------------
@@ -524,14 +526,14 @@ pub mod aes {
   fn test_cipher() {
     // Setup inputs and expected outputs
     let mut key: [u8; KEYLEN] = [0; KEYLEN];
-    let mut plaintext: [u8; BLOCKLEN] = [0;BLOCKLEN];
+    let mut plaintext: u128 = 0;
     let mut exp_ciphertext: u128 = 0;
     #[cfg(AES_KEYLEN = "128")]
     {
       println!("############################\n128b Key Cipher Test\n############################");
       key = 0x2b7e151628aed2a6abf7158809cf4f3c_u128.to_be_bytes();
-      plaintext = 0x3243f6a8885a308d313198a2e0370734_u128.to_be_bytes();
-      exp_ciphertext = 0x03925841d_02dc09fb_dc118597_196a0b32_u128;
+      plaintext = 0x3243f6a8885a308d313198a2e0370734;
+      exp_ciphertext = 0x03925841d_02dc09fb_dc118597_196a0b32;
     }
     #[cfg(AES_KEYLEN = "192")]
     {
@@ -539,7 +541,7 @@ pub mod aes {
       key = [
         0x8e, 0x73, 0xb0, 0xf7, 0xda, 0x0e, 0x64, 0x52, 0xc8, 0x10, 0xf3, 0x2b, 0x80, 0x90, 0x79,
         0xe5, 0x62, 0xf8, 0xea, 0xd2, 0x52, 0x2c, 0x6b, 0x7b];
-      plaintext = 0x6BC1BEE2_2E409F96_E93D7E11_7393172A_u128.to_be_bytes();
+      plaintext = 0x6BC1BEE2_2E409F96_E93D7E11_7393172A;
       exp_ciphertext = 0xBD334F1D_6E45F25F_F712A214_571FA5CC;
     }
     #[cfg(AES_KEYLEN = "256")]
@@ -549,31 +551,31 @@ pub mod aes {
         0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77,
         0x81, 0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14,
         0xdf, 0xf4,];
-      plaintext = 0x6BC1BEE2_2E409F96_E93D7E11_7393172A_u128.to_be_bytes();
+      plaintext = 0x6BC1BEE2_2E409F96_E93D7E11_7393172A;
       exp_ciphertext = 0xF3EED1BD_B5D2A03C_064B5A7E_3DB181F8;
 
     }
 
     println!("---------------------Before Encryption:---------------------\n");
-    println!("plaintext: {:x}", u128::from_be_bytes(plaintext));
+    println!("plaintext: {:x}", plaintext);
     print!("key: ");
     for byte_idx in 0..KEYLEN {
         print!("{:x}", key[byte_idx]);
     }
     print!("\n");
-    let mut text: [u8;BLOCKLEN] = plaintext;
+    let mut text: u128 = plaintext;
     aes(key, &mut text, true);
 
     println!("---------------------After Encryption:---------------------\n");
-    let act_ciphertext = u128::from_be_bytes(text);
+    let act_ciphertext =text;
     println!("actual ciphertext: {:x}", act_ciphertext);
     println!("expected ciphertext: {:x}\n", exp_ciphertext);
     assert_eq!(exp_ciphertext, act_ciphertext);
 
     aes(key, &mut text, false);
     println!("---------------------After Encryption:---------------------\n");
-    let act_plaintext = u128::from_be_bytes(text);
-    let exp_plaintext = u128::from_be_bytes(plaintext);
+    let act_plaintext = text;
+    let exp_plaintext = plaintext;
     println!("actual plaintext: {:x}", act_plaintext);
     println!("expected plaintext: {:x}", exp_plaintext);
     assert_eq!(exp_plaintext, act_plaintext);
