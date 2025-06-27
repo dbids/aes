@@ -1,4 +1,4 @@
-// AES-256-ECB
+// AES-ECB
 // Devin Bidstrup 6/27/25
 
 // Implement AES Electronic Code Book Mode of Operation
@@ -35,7 +35,7 @@ mod aes_ecb {
 
   // ------------------------------------------ Unit Tests ------------------------------------------
   #[test]
-  // Example from: https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/AES_Core128.pdf
+  // Example from: SP800-38A, Appendix F
   fn test_aes_128_ecb() {
     let key: [u8; 16] = 0x2b7e151628aed2a6abf7158809cf4f3c_u128.to_be_bytes();
     let plaintext: Vec<u128> = vec![
@@ -75,7 +75,7 @@ mod aes_ecb {
   }
 
   #[test]
-  // Example from: https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/AES_Core192.pdf
+  // Example from: SP800-38A, Appendix F
   fn test_aes_192_ecb() {
     let key: [u8; 24] = [
       0x8e, 0x73, 0xb0, 0xf7, 0xda, 0x0e, 0x64, 0x52, 0xc8, 0x10, 0xf3, 0x2b, 0x80, 0x90, 0x79,
@@ -118,7 +118,7 @@ mod aes_ecb {
   }
 
   #[test]
-  // Example from: https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/AES_Core256.pdf
+  // Example from: SP800-38A, Appendix F
   fn test_aes_256_ecb() {
     let key: [u8; 32] = [
       0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77,

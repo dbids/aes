@@ -5,5 +5,8 @@
 // AES Cipher Functions
 pub mod aes;
 
-// AES-ECB Functions -- TODO
-pub mod ecb;
+// AES-ECB Functions
+pub mod aes_ecb;
+
+// AES-CBC Functions
+pub mod aes_cbc;
