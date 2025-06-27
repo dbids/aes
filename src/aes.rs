@@ -126,10 +126,10 @@ pub mod aes {
   // ------------------------------------------ Cipher ------------------------------------------
   // Forward Cipher (Encryption)
   // Takes in initial state and round keys... outputs final state by ref.
-  fn cipher(state: &mut Block, rkeys: [Word; WSIZE * (NR + 1)]) {
+  fn cipher(state: &mut Block, rkeys: [Word; WORDLEN * (NR + 1)]) {
     // Setup four word variable to handle round key
-    let mut round_key: [Word; NK] = [[0; WORDLEN]; NK];
-    for word_idx in 0..NK {
+    let mut round_key: [Word; NB] = [[0; WORDLEN]; NB];
+    for word_idx in 0..NB {
       for byte_idx in 0..WORDLEN {
         round_key[word_idx][byte_idx] = rkeys[word_idx][byte_idx];
       }
@@ -140,18 +140,18 @@ pub mod aes {
       sub_bytes(state);
       shift_rows(state);
       mix_columns(state);
-      for word_idx in 0..NK {
+      for word_idx in 0..NB {
         for byte_idx in 0..WORDLEN {
-          round_key[word_idx][byte_idx] = rkeys[(WSIZE * round_idx) + word_idx][byte_idx];
+          round_key[word_idx][byte_idx] = rkeys[(WORDLEN * round_idx) + word_idx][byte_idx];
         }
       }
       add_round_key(state, round_key);
     }
     sub_bytes(state);
     shift_rows(state);
-    for word_idx in 0..NK {
+    for word_idx in 0..NB {
       for byte_idx in 0..WORDLEN {
-        round_key[word_idx][byte_idx] = rkeys[(WSIZE * NR) + word_idx][byte_idx];
+        round_key[word_idx][byte_idx] = rkeys[(WORDLEN * NR) + word_idx][byte_idx];
       }
     }
     add_round_key(state, round_key);
@@ -216,7 +216,7 @@ pub mod aes {
   // A Round Key is applied to the state by applying a bitwise XOR operation.
   // Each round key consists of four words, each of which is applied to a column of the state as follows:
   // [s'_0c, s'_1c, s'_2c, s'_3c] = [s_0c, s_1c, s_2c, s_3c] ⊕ [w_(4*round+c)]
-  fn add_round_key(state: &mut Block, round_key: [Word; NK]) {
+  fn add_round_key(state: &mut Block, round_key: [Word; NB]) {
     for byte_idx in 0..BLOCKLEN {
       state[byte_idx] = gf_add(
         state[byte_idx],
@@ -230,8 +230,8 @@ pub mod aes {
   // Takes in initial state and round keys... outputs final state by ref.
   fn inv_cipher(state: &mut Block, rkeys: [Word; 4 * (NR + 1)]) {
     // Setup four word variable to handle round key
-    let mut round_key: [Word; NK] = [[0; WORDLEN]; NK];
-    for word_idx in 0..NK {
+    let mut round_key: [Word; NB] = [[0; WORDLEN]; NB];
+    for word_idx in 0..NB {
       for byte_idx in 0..WORDLEN {
         round_key[word_idx][byte_idx] = rkeys[(4 * NR) + word_idx][byte_idx];
       }
@@ -241,7 +241,7 @@ pub mod aes {
     for round_idx in (1..NR).rev() {
       inv_shift_rows(state);
       inv_sub_bytes(state);
-      for word_idx in 0..NK {
+      for word_idx in 0..NB {
         for byte_idx in 0..WORDLEN {
           round_key[word_idx][byte_idx] = rkeys[(4 * round_idx) + word_idx][byte_idx];
         }
@@ -251,7 +251,7 @@ pub mod aes {
     }
     inv_shift_rows(state);
     inv_sub_bytes(state);
-    for word_idx in 0..NK {
+    for word_idx in 0..NB {
       for byte_idx in 0..WORDLEN {
         round_key[word_idx][byte_idx] = rkeys[word_idx][byte_idx];
       }
