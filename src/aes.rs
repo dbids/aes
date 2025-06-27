@@ -13,34 +13,40 @@ pub mod aes {
   type Word = [u8; WORDLEN];
 
   // ------------------------------------------ Top Level AES Wrappers per Key Size ------------------------------------------
-  pub fn aes_128(key: [u8; 16], data: &mut u128, is_encrypt: bool) {
+  pub fn aes_128(key: [u8; 16], data: u128, is_encrypt: bool) -> u128 {
     // Define constants
     const KEYLEN: usize = 16; // Key length for AES-128
     const NR: usize = 10; // Number of rounds for AES-128
     const NK: usize = KEYLEN / WORDLEN; // Number of words in the round key
     const NRK: usize = 4 * (NR + 1); // Number of round keys needed
 
-    aes::<KEYLEN, NR, NK, NRK>(key, data, is_encrypt);
+    let mut out: u128 = data;
+    aes::<KEYLEN, NR, NK, NRK>(key, &mut out, is_encrypt);
+    return out;
   }
 
-  pub fn aes_192(key: [u8; 24], data: &mut u128, is_encrypt: bool) {
+  pub fn aes_192(key: [u8; 24], data: u128, is_encrypt: bool) -> u128 {
     // Define constants
     const KEYLEN: usize = 24; // Key length for AES-256
     const NR: usize = 12; // Number of rounds for AES-256
     const NK: usize = KEYLEN / WORDLEN; // Number of words in the round key
     const NRK: usize = 4 * (NR + 1); // Number of round keys needed
 
-    aes::<KEYLEN, NR, NK, NRK>(key, data, is_encrypt);
+    let mut out: u128 = data;
+    aes::<KEYLEN, NR, NK, NRK>(key, &mut out, is_encrypt);
+    return out;
   }
 
-  pub fn aes_256(key: [u8; 32], data: &mut u128, is_encrypt: bool) {
+  pub fn aes_256(key: [u8; 32], data: u128, is_encrypt: bool) -> u128 {
     // Define constants
     const KEYLEN: usize = 32; // Key length for AES-256
     const NR: usize = 14; // Number of rounds for AES-256
     const NK: usize = KEYLEN / WORDLEN; // Number of words in the round key
     const NRK: usize = 4 * (NR + 1); // Number of round keys needed
 
-    aes::<KEYLEN, NR, NK, NRK>(key, data, is_encrypt);
+    let mut out: u128 = data;
+    aes::<KEYLEN, NR, NK, NRK>(key, &mut out, is_encrypt);
+    return out;
   }
 
   // ------------------------------------------ AES Top ------------------------------------------
@@ -561,25 +567,24 @@ pub mod aes {
       print!("{:x}", key[byte_idx]);
     }
     print!("\n");
-    let mut text: u128 = plaintext;
-    aes_128(key, &mut text, true);
+
+    let act_ciphertext = aes_128(key, plaintext, true);
 
     println!("---------------------After Encryption:---------------------\n");
-    let act_ciphertext = text;
     println!("actual ciphertext: {:x}", act_ciphertext);
     println!("expected ciphertext: {:x}\n", exp_ciphertext);
     assert_eq!(exp_ciphertext, act_ciphertext);
 
-    aes_128(key, &mut text, false);
+    let act_plaintext = aes_128(key, act_ciphertext, false);
+
     println!("---------------------After Decryption:---------------------\n");
-    let act_plaintext = text;
-    let exp_plaintext = plaintext;
     println!("actual plaintext: {:x}", act_plaintext);
-    println!("expected plaintext: {:x}", exp_plaintext);
-    assert_eq!(exp_plaintext, act_plaintext);
+    println!("expected plaintext: {:x}", plaintext);
+    assert_eq!(plaintext, act_plaintext);
   }
 
   #[test]
+  // Example from: https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/AES_Core192.pdf
   fn test_aes_192() {
     println!("############################\n192b Key Cipher Test\n############################");
     const KEYLEN: usize = 24;
@@ -597,25 +602,24 @@ pub mod aes {
       print!("{:x}", key[byte_idx]);
     }
     print!("\n");
-    let mut text: u128 = plaintext;
-    aes_192(key, &mut text, true);
+
+    let act_ciphertext = aes_192(key, plaintext, true);
 
     println!("---------------------After Encryption:---------------------\n");
-    let act_ciphertext = text;
     println!("actual ciphertext: {:x}", act_ciphertext);
     println!("expected ciphertext: {:x}\n", exp_ciphertext);
     assert_eq!(exp_ciphertext, act_ciphertext);
 
-    aes_192(key, &mut text, false);
+    let act_plaintext = aes_192(key, act_ciphertext, false);
+
     println!("---------------------After Decryption:---------------------\n");
-    let act_plaintext = text;
-    let exp_plaintext = plaintext;
     println!("actual plaintext: {:x}", act_plaintext);
-    println!("expected plaintext: {:x}", exp_plaintext);
-    assert_eq!(exp_plaintext, act_plaintext);
+    println!("expected plaintext: {:x}", plaintext);
+    assert_eq!(plaintext, act_plaintext);
   }
 
   #[test]
+  // Example from: https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/AES_Core256.pdf
   fn test_aes_256() {
     println!("############################\n256b Key Cipher Test\n############################");
     const KEYLEN: usize = 32;
@@ -634,21 +638,19 @@ pub mod aes {
       print!("{:x}", key[byte_idx]);
     }
     print!("\n");
-    let mut text: u128 = plaintext;
-    aes_256(key, &mut text, true);
+
+    let act_ciphertext = aes_256(key, plaintext, true);
 
     println!("---------------------After Encryption:---------------------\n");
-    let act_ciphertext = text;
     println!("actual ciphertext: {:x}", act_ciphertext);
     println!("expected ciphertext: {:x}\n", exp_ciphertext);
     assert_eq!(exp_ciphertext, act_ciphertext);
 
-    aes_256(key, &mut text, false);
+    let act_plaintext = aes_256(key, act_ciphertext, false);
+
     println!("---------------------After Decryption:---------------------\n");
-    let act_plaintext = text;
-    let exp_plaintext = plaintext;
     println!("actual plaintext: {:x}", act_plaintext);
-    println!("expected plaintext: {:x}", exp_plaintext);
-    assert_eq!(exp_plaintext, act_plaintext);
+    println!("expected plaintext: {:x}", plaintext);
+    assert_eq!(plaintext, act_plaintext);
   }
 }
