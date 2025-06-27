@@ -11,8 +11,10 @@ Mode of operation support status:
 | AES-ECB | ✅ | ✅ | ✅ |
 | AES-CBC | ❌ | ❌ | ❌ |
 | AES-CTR | ❌ | ❌ | ❌ |
+| AES-CCM | ❌ | ❌ | ❌ |
 | AES-GCM | ❌ | ❌ | ❌ |
 | AES-GCM-SIV | ❌ | ❌ | ❌ |
+| CMAC-AES | ❌ | ❌ | ❌ |
 
 ## Building
 ### Requirements
