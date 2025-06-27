@@ -126,7 +126,7 @@ pub mod aes {
   // ------------------------------------------ Cipher ------------------------------------------
   // Forward Cipher (Encryption)
   // Takes in initial state and round keys... outputs final state by ref.
-  fn cipher(state: &mut Block, rkeys: [Word; 4 * (NR + 1)]) {
+  fn cipher(state: &mut Block, rkeys: [Word; WSIZE * (NR + 1)]) {
     // Setup four word variable to handle round key
     let mut round_key: [Word; NK] = [[0; WORDLEN]; NK];
     for word_idx in 0..NK {
@@ -142,7 +142,7 @@ pub mod aes {
       mix_columns(state);
       for word_idx in 0..NK {
         for byte_idx in 0..WORDLEN {
-          round_key[word_idx][byte_idx] = rkeys[(4 * round_idx) + word_idx][byte_idx];
+          round_key[word_idx][byte_idx] = rkeys[(WSIZE * round_idx) + word_idx][byte_idx];
         }
       }
       add_round_key(state, round_key);
@@ -151,7 +151,7 @@ pub mod aes {
     shift_rows(state);
     for word_idx in 0..NK {
       for byte_idx in 0..WORDLEN {
-        round_key[word_idx][byte_idx] = rkeys[(4 * NR) + word_idx][byte_idx];
+        round_key[word_idx][byte_idx] = rkeys[(WSIZE * NR) + word_idx][byte_idx];
       }
     }
     add_round_key(state, round_key);
@@ -522,14 +522,45 @@ pub mod aes {
 
   #[test]
   fn test_cipher() {
-    println!("############################\n128b Key Cipher Test\n############################");
-    let plaintext: [u8; BLOCKLEN] = 0x3243f6a8885a308d313198a2e0370734_u128.to_be_bytes();
-    let exp_ciphertext: u128 = 0x03925841d_02dc09fb_dc118597_196a0b32;
-    let key: [u8; KEYLEN] = 0x2b7e151628aed2a6abf7158809cf4f3c_u128.to_be_bytes();
+    // Setup inputs and expected outputs
+    let mut key: [u8; KEYLEN] = [0; KEYLEN];
+    let mut plaintext: [u8; BLOCKLEN] = [0;BLOCKLEN];
+    let mut exp_ciphertext: u128 = 0;
+    #[cfg(AES_KEYLEN = "128")]
+    {
+      println!("############################\n128b Key Cipher Test\n############################");
+      key = 0x2b7e151628aed2a6abf7158809cf4f3c_u128.to_be_bytes();
+      plaintext = 0x3243f6a8885a308d313198a2e0370734_u128.to_be_bytes();
+      exp_ciphertext = 0x03925841d_02dc09fb_dc118597_196a0b32_u128;
+    }
+    #[cfg(AES_KEYLEN = "192")]
+    {
+      println!("############################\n192b Key Cipher Test\n############################");
+      key = [
+        0x8e, 0x73, 0xb0, 0xf7, 0xda, 0x0e, 0x64, 0x52, 0xc8, 0x10, 0xf3, 0x2b, 0x80, 0x90, 0x79,
+        0xe5, 0x62, 0xf8, 0xea, 0xd2, 0x52, 0x2c, 0x6b, 0x7b];
+      plaintext = 0x6BC1BEE2_2E409F96_E93D7E11_7393172A_u128.to_be_bytes();
+      exp_ciphertext = 0xBD334F1D_6E45F25F_F712A214_571FA5CC;
+    }
+    #[cfg(AES_KEYLEN = "256")]
+    {
+      println!("############################\n256b Key Cipher Test\n############################");
+      key = [
+        0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77,
+        0x81, 0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14,
+        0xdf, 0xf4,];
+      plaintext = 0x6BC1BEE2_2E409F96_E93D7E11_7393172A_u128.to_be_bytes();
+      exp_ciphertext = 0xF3EED1BD_B5D2A03C_064B5A7E_3DB181F8;
+
+    }
 
     println!("---------------------Before Encryption:---------------------\n");
     println!("plaintext: {:x}", u128::from_be_bytes(plaintext));
-    println!("key: {:x}", u128::from_be_bytes(key));
+    print!("key: ");
+    for byte_idx in 0..KEYLEN {
+        print!("{:x}", key[byte_idx]);
+    }
+    print!("\n");
     let mut text: [u8;BLOCKLEN] = plaintext;
     aes(key, &mut text, true);
 
