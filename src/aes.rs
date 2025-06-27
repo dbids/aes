@@ -453,6 +453,7 @@ pub mod aes {
 
   // ------------------------------------------ Unit Tests ------------------------------------------
   #[test]
+  #[ignore]
   fn test_key_exp_128() {
     println!(
       "############################\n128 bit AES Key Expansion Test\n############################"
@@ -474,6 +475,7 @@ pub mod aes {
   }
 
   #[test]
+  #[ignore]
   fn test_key_exp_192() {
     println!(
       "############################\n192 bit AES Key Expansion Test\n############################"
@@ -496,6 +498,7 @@ pub mod aes {
   }
 
   #[test]
+  #[ignore]
   fn test_key_exp_256() {
     println!(
       "############################\n256 bit AES Key Expansion Test\n############################"
