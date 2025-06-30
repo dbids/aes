@@ -25,7 +25,6 @@ Simply a standard rust enviornment.  Tested locally on x86.
 cargo build
 ```
 ## Testing
-### Unit Tests:
 To run all tests use:
 ```
 cargo test
@@ -35,4 +34,4 @@ To run a specific test use:
 cargo test TESTNAME
 ```
 ## Integration Tests:
-TODO
+TODO - should run automatically with github actions
