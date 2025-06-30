@@ -1,3 +1,0 @@
-[submodule "tests/nist-testvectors"]
-	path = tests/nist-testvectors
-	url = git@github.com:coruus/nist-testvectors.git
