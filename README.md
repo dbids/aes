@@ -34,4 +34,5 @@ To run a specific test use:
 cargo test TESTNAME
 ```
 ## Integration Tests:
-TODO - should run automatically with github actions
+Status of tests run for every commit:
+[![Rust](https://github.com/dbids/aes/actions/workflows/rust.yml/badge.svg)](https://github.com/dbids/aes/actions/workflows/rust.yml)
