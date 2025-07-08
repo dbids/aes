@@ -1,4 +1,4 @@
-[![Build Status][build-img]][build-url]
+[![CI Status][build-img]][build-url]
 [![Documentation][doc-img]][doc-url]
 
 [build-img]: https://github.com/dbids/aes/actions/workflows/ci.yml/badge.svg
@@ -42,6 +42,6 @@ To run a specific test use:
 ```
 cargo test TESTNAME
 ```
-## Integration Tests:
+## Continuous Integration Tests:
 Status of tests run for every commit:
-[![Rust](https://github.com/dbids/aes/actions/workflows/rust.yml/badge.svg)](https://github.com/dbids/aes/actions/workflows/rust.yml)
+[![CI Status][build-img]][build-url]
