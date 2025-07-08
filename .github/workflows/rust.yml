@@ -22,6 +22,6 @@ jobs:
       - name: Output rust version
         run: rustup --version
       - name: Build binaries in "${{ matrix.BUILD_TARGET }}" mode
-        run: cargo build --profile ${{ matrix.BUILD_TARGET }} --verbose
+        run: cargo build --${{ matrix.BUILD_TARGET }} --verbose
       - name: Run tests in "${{ matrix.BUILD_TARGET }}" mode
-        run: cargo test --profile ${{ matrix.BUILD_TARGET }} --verbose
+        run: cargo test --${{ matrix.BUILD_TARGET }} --verbose
