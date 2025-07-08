@@ -10,8 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-
+  build-dev:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,7 +18,19 @@ jobs:
         run: rustup --version
       - name: Build binaries in dev mode
         run: cargo build --verbose
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Output rust version
+        run: rustup --version
       - name: Build binaries in release mode
         run: cargo build --release --verbose
+  test:
+      runs-on: ubuntu-latest
+      steps:
+      - uses: actions/checkout@v4
+      - name: Output rust version
+        run: rustup --version
       - name: Run tests (in release mode)
         run: cargo test --verbose
