@@ -1,3 +1,12 @@
+[![Build Status][build-img]][build-url]
+[![Documentation][doc-img]][doc-url]
+
+[build-img]: https://github.com/dbids/aes/actions/workflows/ci.yml/badge.svg
+[build-url]: https://github.com/dbids/aes/actions/workflows/ci.yml
+[doc-img]: https://github.com/dbids/aes/actions/workflows/docs.yml/badge.svg
+[doc-url]: https://dbids.github.io/aes/index.html
+
+
 # dbids' AES lib
 Simple AES library written in Rust for self-educational purposes.
 
