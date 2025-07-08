@@ -1,8 +1,8 @@
 # dbids' AES lib
 Simple AES library written in Rust for self-educational purposes.
 
-Made with the goal of being straightforward at the cost of performance, keys are expanded on
-every encryption or decryption.
+Made with the goal of being straightforward at the cost of performance
+(e.g., keys are expanded on every encryption or decryption for the AES cipher).
 
 Mode of operation support status:
 | | 128 | 192 | 256 |
