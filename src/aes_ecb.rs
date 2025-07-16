@@ -2,181 +2,144 @@
 //  Devin Bidstrup 6/27/25
 
 use crate::aes::{aes_128, aes_192, aes_256};
+use std::convert::TryInto;
+
+const BLOCKLEN: usize = 16; // Block length in bytes - AES is 128b block only
 
 /// This function applies AES encryption or decryption to each block in the input data
-/// using the specified key. The operation is determined by the `is_encrypt` parameter.
+/// using the specified key in place. The operation is determined by the `is_encrypt` parameter.
 ///
 /// # Arguments
-/// * `key` - The AES key to use for encryption or decryption.  Given as a fixed-size(16B) array of bytes.
-/// * `data` - An immutable reference to a vector of 128-bit blocks to process.
+/// * `key` - The AES key to use for encryption or decryption.  Given as a fixed-size(16B, 24B, 32B) array of bytes.
+/// * `data` - An immutable reference to a slice of bytes to process.  Bytes must be a multiple of 16 bytes or 128 bits, otherwise the function will panic.
 /// * `is_encrypt` - A boolean indicating whether to encrypt (true) or decrypt (false).
 ///
 /// # Returns
 /// A vector of processed blocks after applying AES in ECB mode.
-pub fn aes_128_ecb(key: [u8; 16], data: &Vec<u128>, is_encrypt: bool) -> Vec<u128> {
-  data
-    .iter()
-    .map(|&block| aes_128(key, block, is_encrypt))
-    .collect()
-}
+pub fn aes_ecb(key: &[u8], data: &mut [u8], is_encrypt: bool) {
+  assert!(
+    data.len() % BLOCKLEN == 0,
+    "Data length must be a multiple of {} bytes.",
+    BLOCKLEN
+  );
 
-/// This function applies AES encryption or decryption to each block in the input data
-/// using the specified key. The operation is determined by the `is_encrypt` parameter.
-///
-/// # Arguments
-/// * `key` - The AES key to use for encryption or decryption.  Given as a fixed-size(24B) array of bytes.
-/// * `data` - An immutable reference to a vector of 128-bit blocks to process.
-/// * `is_encrypt` - A boolean indicating whether to encrypt (true) or decrypt (false).
-///
-/// # Returns
-/// A vector of processed blocks after applying AES in ECB mode.
-pub fn aes_192_ecb(key: [u8; 24], data: &Vec<u128>, is_encrypt: bool) -> Vec<u128> {
-  data
-    .iter()
-    .map(|&block| aes_192(key, block, is_encrypt))
-    .collect()
-}
-
-/// This function applies AES encryption or decryption to each block in the input data
-/// using the specified key. The operation is determined by the `is_encrypt` parameter.
-///
-/// # Arguments
-/// * `key` - The AES key to use for encryption or decryption.  Given as a fixed-size(32B) array of bytes.
-/// * `data` - An immutable reference to a vector of 128-bit blocks to process.
-/// * `is_encrypt` - A boolean indicating whether to encrypt (true) or decrypt (false).
-///
-/// # Returns
-/// A vector of processed blocks after applying AES in ECB mode.
-pub fn aes_256_ecb(key: [u8; 32], data: &Vec<u128>, is_encrypt: bool) -> Vec<u128> {
-  data
-    .iter()
-    .map(|&block| aes_256(key, block, is_encrypt))
-    .collect()
+  for block in data.chunks_mut(BLOCKLEN) {
+    let temp_block = match key.len() {
+      16 => aes_128(
+        key.try_into().unwrap(),
+        block.try_into().unwrap(),
+        is_encrypt,
+      ),
+      24 => aes_192(
+        key.try_into().unwrap(),
+        block.try_into().unwrap(),
+        is_encrypt,
+      ),
+      32 => aes_256(
+        key.try_into().unwrap(),
+        block.try_into().unwrap(),
+        is_encrypt,
+      ),
+      _ => panic!("Invalid key length. Must be 128, 192, or 256 bits."),
+    };
+    block.copy_from_slice(&temp_block);
+  }
 }
 
 // ------------------------------------------ Unit Tests ------------------------------------------
-#[test]
-// Example from: SP800-38A, Appendix F
-fn test_aes_128_ecb() {
-  let key: [u8; 16] = 0x2b7e151628aed2a6abf7158809cf4f3c_u128.to_be_bytes();
-  let plaintext: Vec<u128> = vec![
-    0x6BC1BEE2_2E409F96_E93D7E11_7393172A,
-    0xAE2D8A57_1E03AC9C_9EB76FAC_45AF8E51,
-    0x30C81C46_A35CE411_E5FBC119_1A0A52EF,
-    0xF69F2445_DF4F9B17_AD2B417B_E66C3710,
-  ];
-  let exp_ciphertext: Vec<u128> = vec![
-    0x3AD77BB4_0D7A3660_A89ECAF3_2466EF97,
-    0xF5D3D585_03B9699D_E785895A_96FDBAAF,
-    0x43B1CD7F_598ECE23_881B00E3_ED030688,
-    0x7B0C785E_27E8AD3F_82232071_04725DD4,
-  ];
-
-  println!("---------------------Before Encryption:---------------------\n");
-  println!("plaintext: {:x?}", plaintext);
-  print!("key: ");
-  for byte_idx in 0..16 {
-    print!("{:x}", key[byte_idx]);
+#[cfg(test)]
+mod tests {
+  use super::*;
+  #[test]
+  // Example from: SP800-38A, Appendix F
+  fn test_aes_128_ecb() {
+    let key: [u8; 16] = 0x2b7e151628aed2a6abf7158809cf4f3c_u128.to_be_bytes();
+    let plaintext: [u8; 64] = [
+      0x6B, 0xC1, 0xBE, 0xE2, 0x2E, 0x40, 0x9F, 0x96, 0xE9, 0x3D, 0x7E, 0x11, 0x73, 0x93, 0x17,
+      0x2A, 0xAE, 0x2D, 0x8A, 0x57, 0x1E, 0x03, 0xAC, 0x9C, 0x9E, 0xB7, 0x6F, 0xAC, 0x45, 0xAF,
+      0x8E, 0x51, 0x30, 0xC8, 0x1C, 0x46, 0xA3, 0x5C, 0xE4, 0x11, 0xE5, 0xFB, 0xC1, 0x19, 0x1A,
+      0x0A, 0x52, 0xEF, 0xF6, 0x9F, 0x24, 0x45, 0xDF, 0x4F, 0x9B, 0x17, 0xAD, 0x2B, 0x41, 0x7B,
+      0xE6, 0x6C, 0x37, 0x10,
+    ];
+    let exp_ciphertext: [u8; 64] = [
+      0x3A, 0xD7, 0x7B, 0xB4, 0x0D, 0x7A, 0x36, 0x60, 0xA8, 0x9E, 0xCA, 0xF3, 0x24, 0x66, 0xEF,
+      0x97, 0xF5, 0xD3, 0xD5, 0x85, 0x03, 0xB9, 0x69, 0x9D, 0xE7, 0x85, 0x89, 0x5A, 0x96, 0xFD,
+      0xBA, 0xAF, 0x43, 0xB1, 0xCD, 0x7F, 0x59, 0x8E, 0xCE, 0x23, 0x88, 0x1B, 0x00, 0xE3, 0xED,
+      0x03, 0x06, 0x88, 0x7B, 0x0C, 0x78, 0x5E, 0x27, 0xE8, 0xAD, 0x3F, 0x82, 0x23, 0x20, 0x71,
+      0x04, 0x72, 0x5D, 0xD4,
+    ];
+    test_aes_ecb_comm(&key, plaintext, exp_ciphertext);
   }
-  print!("\n");
 
-  let act_ciphertext: Vec<u128> = aes_128_ecb(key, &plaintext, true);
+  #[test]
+  // Example from: SP800-38A, Appendix F
+  fn test_aes_192_ecb() {
+    let key: [u8; 24] = [
+      0x8e, 0x73, 0xb0, 0xf7, 0xda, 0x0e, 0x64, 0x52, 0xc8, 0x10, 0xf3, 0x2b, 0x80, 0x90, 0x79,
+      0xe5, 0x62, 0xf8, 0xea, 0xd2, 0x52, 0x2c, 0x6b, 0x7b,
+    ];
 
-  println!("---------------------After Encryption:---------------------\n");
-  println!("actual ciphertext: {:x?}", act_ciphertext);
-  println!("expected ciphertext: {:x?}\n", exp_ciphertext);
-  assert_eq!(exp_ciphertext, act_ciphertext);
-
-  let act_plaintext: Vec<u128> = aes_128_ecb(key, &act_ciphertext, false);
-
-  println!("---------------------After Decryption:---------------------\n");
-  println!("actual plaintext: {:x?}", act_plaintext);
-  println!("expected plaintext: {:x?}", plaintext);
-  assert_eq!(plaintext, act_plaintext);
-}
-
-#[test]
-// Example from: SP800-38A, Appendix F
-fn test_aes_192_ecb() {
-  let key: [u8; 24] = [
-    0x8e, 0x73, 0xb0, 0xf7, 0xda, 0x0e, 0x64, 0x52, 0xc8, 0x10, 0xf3, 0x2b, 0x80, 0x90, 0x79, 0xe5,
-    0x62, 0xf8, 0xea, 0xd2, 0x52, 0x2c, 0x6b, 0x7b,
-  ];
-  let plaintext: Vec<u128> = vec![
-    0x6BC1BEE2_2E409F96_E93D7E11_7393172A,
-    0xAE2D8A57_1E03AC9C_9EB76FAC_45AF8E51,
-    0x30C81C46_A35CE411_E5FBC119_1A0A52EF,
-    0xF69F2445_DF4F9B17_AD2B417B_E66C3710,
-  ];
-  let exp_ciphertext: Vec<u128> = vec![
-    0xBD334F1D_6E45F25F_F712A214_571FA5CC,
-    0x97410484_6D0AD3AD_7734ECB3_ECEE4EEF,
-    0xEF7AFD22_70E2E60A_DCE0BA2F_ACE6444E,
-    0x9A4B41BA_738D6C72_FB166916_03C18E0E,
-  ];
-
-  println!("---------------------Before Encryption:---------------------\n");
-  println!("plaintext: {:x?}", plaintext);
-  print!("key: ");
-  for byte_idx in 0..24 {
-    print!("{:x}", key[byte_idx]);
+    let plaintext: [u8; 64] = [
+      0x6B, 0xC1, 0xBE, 0xE2, 0x2E, 0x40, 0x9F, 0x96, 0xE9, 0x3D, 0x7E, 0x11, 0x73, 0x93, 0x17,
+      0x2A, 0xAE, 0x2D, 0x8A, 0x57, 0x1E, 0x03, 0xAC, 0x9C, 0x9E, 0xB7, 0x6F, 0xAC, 0x45, 0xAF,
+      0x8E, 0x51, 0x30, 0xC8, 0x1C, 0x46, 0xA3, 0x5C, 0xE4, 0x11, 0xE5, 0xFB, 0xC1, 0x19, 0x1A,
+      0x0A, 0x52, 0xEF, 0xF6, 0x9F, 0x24, 0x45, 0xDF, 0x4F, 0x9B, 0x17, 0xAD, 0x2B, 0x41, 0x7B,
+      0xE6, 0x6C, 0x37, 0x10,
+    ];
+    let exp_ciphertext: [u8; 64] = [
+      0xBD, 0x33, 0x4F, 0x1D, 0x6E, 0x45, 0xF2, 0x5F, 0xF7, 0x12, 0xA2, 0x14, 0x57, 0x1F, 0xA5,
+      0xCC, 0x97, 0x41, 0x04, 0x84, 0x6D, 0x0A, 0xD3, 0xAD, 0x77, 0x34, 0xEC, 0xB3, 0xEC, 0xEE,
+      0x4E, 0xEF, 0xEF, 0x7A, 0xFD, 0x22, 0x70, 0xE2, 0xE6, 0x0A, 0xDC, 0xE0, 0xBA, 0x2F, 0xAC,
+      0xE6, 0x44, 0x4E, 0x9A, 0x4B, 0x41, 0xBA, 0x73, 0x8D, 0x6C, 0x72, 0xFB, 0x16, 0x69, 0x16,
+      0x03, 0xC1, 0x8E, 0x0E,
+    ];
+    test_aes_ecb_comm(&key, plaintext, exp_ciphertext);
   }
-  print!("\n");
 
-  let act_ciphertext: Vec<u128> = aes_192_ecb(key, &plaintext, true);
-
-  println!("---------------------After Encryption:---------------------\n");
-  println!("actual ciphertext: {:x?}", act_ciphertext);
-  println!("expected ciphertext: {:x?}\n", exp_ciphertext);
-  assert_eq!(exp_ciphertext, act_ciphertext);
-
-  let act_plaintext: Vec<u128> = aes_192_ecb(key, &act_ciphertext, false);
-
-  println!("---------------------After Decryption:---------------------\n");
-  println!("actual plaintext: {:x?}", act_plaintext);
-  println!("expected plaintext: {:x?}", plaintext);
-  assert_eq!(plaintext, act_plaintext);
-}
-
-#[test]
-// Example from: SP800-38A, Appendix F
-fn test_aes_256_ecb() {
-  let key: [u8; 32] = [
-    0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
-    0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4,
-  ];
-  let plaintext: Vec<u128> = vec![
-    0x6BC1BEE2_2E409F96_E93D7E11_7393172A,
-    0xAE2D8A57_1E03AC9C_9EB76FAC_45AF8E51,
-    0x30C81C46_A35CE411_E5FBC119_1A0A52EF,
-    0xF69F2445_DF4F9B17_AD2B417B_E66C3710,
-  ];
-  let exp_ciphertext: Vec<u128> = vec![
-    0xF3EED1BD_B5D2A03C_064B5A7E_3DB181F8,
-    0x591CCB10_D410ED26_DC5BA74A_31362870,
-    0xB6ED21B9_9CA6F4F9_F153E7B1_BEAFED1D,
-    0x23304B7A_39F9F3FF_067D8D8F_9E24ECC7,
-  ];
-
-  println!("---------------------Before Encryption:---------------------\n");
-  println!("plaintext: {:x?}", plaintext);
-  print!("key: ");
-  for byte_idx in 0..32 {
-    print!("{:x}", key[byte_idx]);
+  #[test]
+  // Example from: SP800-38A, Appendix F
+  fn test_aes_256_ecb() {
+    let key: [u8; 32] = [
+      0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77,
+      0x81, 0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14,
+      0xdf, 0xf4,
+    ];
+    let plaintext: [u8; 64] = [
+      0x6B, 0xC1, 0xBE, 0xE2, 0x2E, 0x40, 0x9F, 0x96, 0xE9, 0x3D, 0x7E, 0x11, 0x73, 0x93, 0x17,
+      0x2A, 0xAE, 0x2D, 0x8A, 0x57, 0x1E, 0x03, 0xAC, 0x9C, 0x9E, 0xB7, 0x6F, 0xAC, 0x45, 0xAF,
+      0x8E, 0x51, 0x30, 0xC8, 0x1C, 0x46, 0xA3, 0x5C, 0xE4, 0x11, 0xE5, 0xFB, 0xC1, 0x19, 0x1A,
+      0x0A, 0x52, 0xEF, 0xF6, 0x9F, 0x24, 0x45, 0xDF, 0x4F, 0x9B, 0x17, 0xAD, 0x2B, 0x41, 0x7B,
+      0xE6, 0x6C, 0x37, 0x10,
+    ];
+    let exp_ciphertext: [u8; 64] = [
+      0xF3, 0xEE, 0xD1, 0xBD, 0xB5, 0xD2, 0xA0, 0x3C, 0x06, 0x4B, 0x5A, 0x7E, 0x3D, 0xB1, 0x81,
+      0xF8, 0x59, 0x1C, 0xCB, 0x10, 0xD4, 0x10, 0xED, 0x26, 0xDC, 0x5B, 0xA7, 0x4A, 0x31, 0x36,
+      0x28, 0x70, 0xB6, 0xED, 0x21, 0xB9, 0x9C, 0xA6, 0xF4, 0xF9, 0xF1, 0x53, 0xE7, 0xB1, 0xBE,
+      0xAF, 0xED, 0x1D, 0x23, 0x30, 0x4B, 0x7A, 0x39, 0xF9, 0xF3, 0xFF, 0x06, 0x7D, 0x8D, 0x8F,
+      0x9E, 0x24, 0xEC, 0xC7,
+    ];
+    test_aes_ecb_comm(&key, plaintext, exp_ciphertext);
   }
-  print!("\n");
 
-  let act_ciphertext: Vec<u128> = aes_256_ecb(key, &plaintext, true);
+  fn test_aes_ecb_comm(key: &[u8], plaintext: [u8; 64], exp_ciphertext: [u8; 64]) {
+    println!("---------------------Before Encryption:---------------------\n");
+    println!("plaintext: {:x?}", plaintext);
+    println!("key: {:x?}", key);
 
-  println!("---------------------After Encryption:---------------------\n");
-  println!("actual ciphertext: {:x?}", act_ciphertext);
-  println!("expected ciphertext: {:x?}\n", exp_ciphertext);
-  assert_eq!(exp_ciphertext, act_ciphertext);
+    let mut act_ciphertext: [u8; 64] = plaintext;
+    aes_ecb(key, &mut act_ciphertext, true);
 
-  let act_plaintext: Vec<u128> = aes_256_ecb(key, &act_ciphertext, false);
+    println!("---------------------After Encryption:---------------------\n");
+    println!("actual ciphertext: {:x?}", act_ciphertext);
+    println!("expected ciphertext: {:x?}\n", exp_ciphertext);
+    assert_eq!(exp_ciphertext, act_ciphertext);
 
-  println!("---------------------After Decryption:---------------------\n");
-  println!("actual plaintext: {:x?}", act_plaintext);
-  println!("expected plaintext: {:x?}", plaintext);
-  assert_eq!(plaintext, act_plaintext);
+    let mut act_plaintext = act_ciphertext;
+    aes_ecb(key, &mut act_plaintext, false);
+
+    println!("---------------------After Decryption:---------------------\n");
+    println!("actual plaintext: {:x?}", act_plaintext);
+    println!("expected plaintext: {:x?}", plaintext);
+    assert_eq!(plaintext, act_plaintext);
+  }
 }

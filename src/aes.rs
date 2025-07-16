@@ -21,15 +21,13 @@ type Word = [u8; WORDLEN];
 ///
 /// # Returns
 /// The resulting encrypted or decrypted block.
-pub fn aes_128(key: [u8; 16], data: u128, is_encrypt: bool) -> u128 {
+pub fn aes_128(key: [u8; 16], data: [u8; BLOCKLEN], is_encrypt: bool) -> [u8; BLOCKLEN] {
   const KEYLEN: usize = 16; // Key length for AES-128
   const NR: usize = 10; // Number of rounds for AES-128
   const NK: usize = KEYLEN / WORDLEN; // Number of words in the round key
   const NRK: usize = 4 * (NR + 1); // Number of round keys needed
 
-  let mut out: u128 = data;
-  aes::<KEYLEN, NR, NK, NRK>(key, &mut out, is_encrypt);
-  return out;
+  aes::<KEYLEN, NR, NK, NRK>(key, data, is_encrypt)
 }
 
 /// Encrypts or decrypts a 128-bit block of data using the AES-192 algorithm.
@@ -41,15 +39,13 @@ pub fn aes_128(key: [u8; 16], data: u128, is_encrypt: bool) -> u128 {
 ///
 /// # Returns
 /// The resulting encrypted or decrypted block.
-pub fn aes_192(key: [u8; 24], data: u128, is_encrypt: bool) -> u128 {
+pub fn aes_192(key: [u8; 24], data: [u8; BLOCKLEN], is_encrypt: bool) -> [u8; BLOCKLEN] {
   const KEYLEN: usize = 24; // Key length for AES-256
   const NR: usize = 12; // Number of rounds for AES-256
   const NK: usize = KEYLEN / WORDLEN; // Number of words in the round key
   const NRK: usize = 4 * (NR + 1); // Number of round keys needed
 
-  let mut out: u128 = data;
-  aes::<KEYLEN, NR, NK, NRK>(key, &mut out, is_encrypt);
-  return out;
+  aes::<KEYLEN, NR, NK, NRK>(key, data, is_encrypt)
 }
 
 /// Encrypts or decrypts a 128-bit block of data using the AES-256 algorithm.
@@ -61,36 +57,34 @@ pub fn aes_192(key: [u8; 24], data: u128, is_encrypt: bool) -> u128 {
 ///
 /// # Returns
 /// The resulting encrypted or decrypted block.
-pub fn aes_256(key: [u8; 32], data: u128, is_encrypt: bool) -> u128 {
+pub fn aes_256(key: [u8; 32], data: [u8; BLOCKLEN], is_encrypt: bool) -> [u8; BLOCKLEN] {
   const KEYLEN: usize = 32; // Key length for AES-256
   const NR: usize = 14; // Number of rounds for AES-256
   const NK: usize = KEYLEN / WORDLEN; // Number of words in the round key
   const NRK: usize = 4 * (NR + 1); // Number of round keys needed
 
-  let mut out: u128 = data;
-  aes::<KEYLEN, NR, NK, NRK>(key, &mut out, is_encrypt);
-  return out;
+  aes::<KEYLEN, NR, NK, NRK>(key, data, is_encrypt)
 }
 
 // ------------------------------------------ AES Top ------------------------------------------
 /// Generic AES function that handles encryption or decryption based on the provided key length, number of rounds, and round keys.
 fn aes<const KEYLEN: usize, const NR: usize, const NK: usize, const NRK: usize>(
   key: [u8; KEYLEN],
-  data: &mut u128,
+  data: [u8; BLOCKLEN],
   is_encrypt: bool,
-) {
+) -> [u8; BLOCKLEN] {
   // Generate round keys
   let mut rkeys: [Word; NRK] = [[0; WORDLEN]; NRK];
   key_expansion::<KEYLEN, NRK, NK>(key, &mut rkeys);
 
   // Perform encrypt / decrypt
-  let mut temp_data: [u8; BLOCKLEN] = data.to_be_bytes();
+  let mut out: [u8; BLOCKLEN] = data;
   if is_encrypt {
-    cipher::<NR, NRK>(&mut temp_data, rkeys);
+    cipher::<NR, NRK>(&mut out, rkeys);
   } else {
-    inv_cipher::<NR, NRK>(&mut temp_data, rkeys);
+    inv_cipher::<NR, NRK>(&mut out, rkeys);
   }
-  *data = u128::from_be_bytes(temp_data);
+  return out;
 }
 
 // ------------------------------------------ Key Expansion ------------------------------------------
@@ -474,201 +468,229 @@ fn gf_mult(b: u8, c: u8) -> u8 {
 }
 
 // ------------------------------------------ Unit Tests ------------------------------------------
-#[test]
-#[ignore]
-fn test_key_exp_128() {
-  println!(
-    "############################\n128 bit AES Key Expansion Test\n############################"
-  );
-  let key = [
-    0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c,
-  ];
-  let exp_round_keys = [
-    0x2b7e1516, 0x28aed2a6, 0xabf71588, 0x09cf4f3c, 0xa0fafe17, 0x88542cb1, 0x23a33939, 0x2a6c7605,
-    0xf2c295f2, 0x7a96b943, 0x5935807a, 0x7359f67f, 0x3d80477d, 0x4716fe3e, 0x1e237e44, 0x6d7a883b,
-    0xef44a541, 0xa8525b7f, 0xb671253b, 0xdb0bad00, 0xd4d1c6f8, 0x7c839d87, 0xcaf2b8bc, 0x11f915bc,
-    0x6d88a37a, 0x110b3efd, 0xdbf98641, 0xca0093fd, 0x4e54f70e, 0x5f5fc9f3, 0x84a64fb2, 0x4ea6dc4f,
-    0xead27321, 0xb58dbad2, 0x312bf560, 0x7f8d292f, 0xac7766f3, 0x19fadc21, 0x28d12941, 0x575c006e,
-    0xd014f9a8, 0xc9ee2589, 0xe13f0cc8, 0xb6630ca6,
-  ];
-  test_key_exp::<16, 10, 4, 44>(key, exp_round_keys);
-}
-
-#[test]
-#[ignore]
-fn test_key_exp_192() {
-  println!(
-    "############################\n192 bit AES Key Expansion Test\n############################"
-  );
-  let key = [
-    0x8e, 0x73, 0xb0, 0xf7, 0xda, 0x0e, 0x64, 0x52, 0xc8, 0x10, 0xf3, 0x2b, 0x80, 0x90, 0x79, 0xe5,
-    0x62, 0xf8, 0xea, 0xd2, 0x52, 0x2c, 0x6b, 0x7b,
-  ];
-  let exp_round_keys = [
-    0x8e73b0f7, 0xda0e6452, 0xc810f32b, 0x809079e5, 0x62f8ead2, 0x522c6b7b, 0xfe0c91f7, 0x2402f5a5,
-    0xec12068e, 0x6c827f6b, 0x0e7a95b9, 0x5c56fec2, 0x4db7b4bd, 0x69b54118, 0x85a74796, 0xe92538fd,
-    0xe75fad44, 0xbb095386, 0x485af057, 0x21efb14f, 0xa448f6d9, 0x4d6dce24, 0xaa326360, 0x113b30e6,
-    0xa25e7ed5, 0x83b1cf9a, 0x27f93943, 0x6a94f767, 0xc0a69407, 0xd19da4e1, 0xec1786eb, 0x6fa64971,
-    0x485f7032, 0x22cb8755, 0xe26d1352, 0x33f0b7b3, 0x40beeb28, 0x2f18a259, 0x6747d26b, 0x458c553e,
-    0xa7e1466c, 0x9411f1df, 0x821f750a, 0xad07d753, 0xca400538, 0x8fcc5006, 0x282d166a, 0xbc3ce7b5,
-    0xe98ba06f, 0x448c773c, 0x8ecc7204, 0x01002202,
-  ];
-  test_key_exp::<24, 12, 6, 52>(key, exp_round_keys);
-}
-
-#[test]
-#[ignore]
-fn test_key_exp_256() {
-  println!(
-    "############################\n256 bit AES Key Expansion Test\n############################"
-  );
-  let key = [
-    0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
-    0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4,
-  ];
-  let exp_round_keys = [
-    0x603deb10, 0x15ca71be, 0x2b73aef0, 0x857d7781, 0x1f352c07, 0x3b6108d7, 0x2d9810a3, 0x0914dff4,
-    0x9ba35411, 0x8e6925af, 0xa51a8b5f, 0x2067fcde, 0xa8b09c1a, 0x93d194cd, 0xbe49846e, 0xb75d5b9a,
-    0xd59aecb8, 0x5bf3c917, 0xfee94248, 0xde8ebe96, 0xb5a9328a, 0x2678a647, 0x98312229, 0x2f6c79b3,
-    0x812c81ad, 0xdadf48ba, 0x24360af2, 0xfab8b464, 0x98c5bfc9, 0xbebd198e, 0x268c3ba7, 0x09e04214,
-    0x68007bac, 0xb2df3316, 0x96e939e4, 0x6c518d80, 0xc814e204, 0x76a9fb8a, 0x5025c02d, 0x59c58239,
-    0xde136967, 0x6ccc5a71, 0xfa256395, 0x9674ee15, 0x5886ca5d, 0x2e2f31d7, 0x7e0af1fa, 0x27cf73c3,
-    0x749c47ab, 0x18501dda, 0xe2757e4f, 0x7401905a, 0xcafaaae3, 0xe4d59b34, 0x9adf6ace, 0xbd10190d,
-    0xfe4890d1, 0xe6188d0b, 0x046df344, 0x706c631e,
-  ];
-  test_key_exp::<32, 14, 8, 60>(key, exp_round_keys);
-}
-
 #[cfg(test)]
-fn test_key_exp<const KEYLEN: usize, const NR: usize, const NK: usize, const NRK: usize>(
-  key: [u8; KEYLEN],
-  exp_round_keys: [u32; NRK],
-) {
-  // Run test
-  let mut round_keys: [Word; NRK] = [[0; WORDLEN]; NRK];
-  key_expansion::<KEYLEN, NRK, NK>(key, &mut round_keys);
+mod tests {
+  use super::*;
+  #[test]
+  #[ignore]
+  fn test_key_exp_128() {
+    println!(
+      "############################\n128 bit AES Key Expansion Test\n############################"
+    );
+    let key = [
+      0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f,
+      0x3c,
+    ];
+    let exp_round_keys = [
+      0x2b7e1516, 0x28aed2a6, 0xabf71588, 0x09cf4f3c, 0xa0fafe17, 0x88542cb1, 0x23a33939,
+      0x2a6c7605, 0xf2c295f2, 0x7a96b943, 0x5935807a, 0x7359f67f, 0x3d80477d, 0x4716fe3e,
+      0x1e237e44, 0x6d7a883b, 0xef44a541, 0xa8525b7f, 0xb671253b, 0xdb0bad00, 0xd4d1c6f8,
+      0x7c839d87, 0xcaf2b8bc, 0x11f915bc, 0x6d88a37a, 0x110b3efd, 0xdbf98641, 0xca0093fd,
+      0x4e54f70e, 0x5f5fc9f3, 0x84a64fb2, 0x4ea6dc4f, 0xead27321, 0xb58dbad2, 0x312bf560,
+      0x7f8d292f, 0xac7766f3, 0x19fadc21, 0x28d12941, 0x575c006e, 0xd014f9a8, 0xc9ee2589,
+      0xe13f0cc8, 0xb6630ca6,
+    ];
+    test_key_exp::<16, 10, 4, 44>(key, exp_round_keys);
+  }
 
-  // Determine result
-  println!("---------------------Check key expansion---------------------");
-  let mut is_ok: bool = true;
-  for round_idx in 0..NR + 1 {
-    println!("\n round: {round_idx},");
-    println!("ACTUAL,\t\t EXPECTED");
-    'for_word: for word_idx in 0..NK {
-      if ((4 * round_idx) + word_idx) >= (4 * (NR + 1)) {
-        break 'for_word;
-      }
-      let rk = u32::from_be_bytes(round_keys[(4 * round_idx) + word_idx]);
-      let ek = exp_round_keys[(4 * round_idx) + word_idx];
-      println!("{rk:>2x}, \t {ek:>2x}");
-      if rk != ek {
-        is_ok = false;
-        println!("\t MISMATCH")
+  #[test]
+  #[ignore]
+  fn test_key_exp_192() {
+    println!(
+      "############################\n192 bit AES Key Expansion Test\n############################"
+    );
+    let key = [
+      0x8e, 0x73, 0xb0, 0xf7, 0xda, 0x0e, 0x64, 0x52, 0xc8, 0x10, 0xf3, 0x2b, 0x80, 0x90, 0x79,
+      0xe5, 0x62, 0xf8, 0xea, 0xd2, 0x52, 0x2c, 0x6b, 0x7b,
+    ];
+    let exp_round_keys = [
+      0x8e73b0f7, 0xda0e6452, 0xc810f32b, 0x809079e5, 0x62f8ead2, 0x522c6b7b, 0xfe0c91f7,
+      0x2402f5a5, 0xec12068e, 0x6c827f6b, 0x0e7a95b9, 0x5c56fec2, 0x4db7b4bd, 0x69b54118,
+      0x85a74796, 0xe92538fd, 0xe75fad44, 0xbb095386, 0x485af057, 0x21efb14f, 0xa448f6d9,
+      0x4d6dce24, 0xaa326360, 0x113b30e6, 0xa25e7ed5, 0x83b1cf9a, 0x27f93943, 0x6a94f767,
+      0xc0a69407, 0xd19da4e1, 0xec1786eb, 0x6fa64971, 0x485f7032, 0x22cb8755, 0xe26d1352,
+      0x33f0b7b3, 0x40beeb28, 0x2f18a259, 0x6747d26b, 0x458c553e, 0xa7e1466c, 0x9411f1df,
+      0x821f750a, 0xad07d753, 0xca400538, 0x8fcc5006, 0x282d166a, 0xbc3ce7b5, 0xe98ba06f,
+      0x448c773c, 0x8ecc7204, 0x01002202,
+    ];
+    test_key_exp::<24, 12, 6, 52>(key, exp_round_keys);
+  }
+
+  #[test]
+  #[ignore]
+  fn test_key_exp_256() {
+    println!(
+      "############################\n256 bit AES Key Expansion Test\n############################"
+    );
+    let key = [
+      0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77,
+      0x81, 0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14,
+      0xdf, 0xf4,
+    ];
+    let exp_round_keys = [
+      0x603deb10, 0x15ca71be, 0x2b73aef0, 0x857d7781, 0x1f352c07, 0x3b6108d7, 0x2d9810a3,
+      0x0914dff4, 0x9ba35411, 0x8e6925af, 0xa51a8b5f, 0x2067fcde, 0xa8b09c1a, 0x93d194cd,
+      0xbe49846e, 0xb75d5b9a, 0xd59aecb8, 0x5bf3c917, 0xfee94248, 0xde8ebe96, 0xb5a9328a,
+      0x2678a647, 0x98312229, 0x2f6c79b3, 0x812c81ad, 0xdadf48ba, 0x24360af2, 0xfab8b464,
+      0x98c5bfc9, 0xbebd198e, 0x268c3ba7, 0x09e04214, 0x68007bac, 0xb2df3316, 0x96e939e4,
+      0x6c518d80, 0xc814e204, 0x76a9fb8a, 0x5025c02d, 0x59c58239, 0xde136967, 0x6ccc5a71,
+      0xfa256395, 0x9674ee15, 0x5886ca5d, 0x2e2f31d7, 0x7e0af1fa, 0x27cf73c3, 0x749c47ab,
+      0x18501dda, 0xe2757e4f, 0x7401905a, 0xcafaaae3, 0xe4d59b34, 0x9adf6ace, 0xbd10190d,
+      0xfe4890d1, 0xe6188d0b, 0x046df344, 0x706c631e,
+    ];
+    test_key_exp::<32, 14, 8, 60>(key, exp_round_keys);
+  }
+
+  #[cfg(test)]
+  fn test_key_exp<const KEYLEN: usize, const NR: usize, const NK: usize, const NRK: usize>(
+    key: [u8; KEYLEN],
+    exp_round_keys: [u32; NRK],
+  ) {
+    // Run test
+    let mut round_keys: [Word; NRK] = [[0; WORDLEN]; NRK];
+    key_expansion::<KEYLEN, NRK, NK>(key, &mut round_keys);
+
+    // Determine result
+    println!("---------------------Check key expansion---------------------");
+    let mut is_ok: bool = true;
+    for round_idx in 0..NR + 1 {
+      println!("\n round: {round_idx},");
+      println!("ACTUAL,\t\t EXPECTED");
+      'for_word: for word_idx in 0..NK {
+        if ((4 * round_idx) + word_idx) >= (4 * (NR + 1)) {
+          break 'for_word;
+        }
+        let rk = u32::from_be_bytes(round_keys[(4 * round_idx) + word_idx]);
+        let ek = exp_round_keys[(4 * round_idx) + word_idx];
+        println!("{rk:>2x}, \t {ek:>2x}");
+        if rk != ek {
+          is_ok = false;
+          println!("\t MISMATCH")
+        }
       }
     }
+    println!("---------------------\n");
+
+    assert_eq!(is_ok, true);
   }
-  println!("---------------------\n");
 
-  assert_eq!(is_ok, true);
-}
+  #[test]
+  fn test_aes_128() {
+    println!("############################\n128b Key Cipher Test\n############################");
+    const KEYLEN: usize = 16;
+    let key: [u8; KEYLEN] = 0x2b7e151628aed2a6abf7158809cf4f3c_u128.to_be_bytes();
+    let plaintext: [u8; BLOCKLEN] = 0x3243f6a8885a308d313198a2e0370734_u128.to_be_bytes();
+    let exp_ciphertext: [u8; BLOCKLEN] = 0x03925841d_02dc09fb_dc118597_196a0b32_u128.to_be_bytes();
 
-#[test]
-fn test_aes_128() {
-  println!("############################\n128b Key Cipher Test\n############################");
-  const KEYLEN: usize = 16;
-  let key: [u8; KEYLEN] = 0x2b7e151628aed2a6abf7158809cf4f3c_u128.to_be_bytes();
-  let plaintext: u128 = 0x3243f6a8885a308d313198a2e0370734;
-  let exp_ciphertext: u128 = 0x03925841d_02dc09fb_dc118597_196a0b32;
+    println!("---------------------Before Encryption:---------------------\n");
+    println!("plaintext: {:x}", u128::from_be_bytes(plaintext));
+    print!("key: ");
+    for byte_idx in 0..KEYLEN {
+      print!("{:x}", key[byte_idx]);
+    }
+    print!("\n");
 
-  println!("---------------------Before Encryption:---------------------\n");
-  println!("plaintext: {:x}", plaintext);
-  print!("key: ");
-  for byte_idx in 0..KEYLEN {
-    print!("{:x}", key[byte_idx]);
+    let act_ciphertext = aes_128(key, plaintext, true);
+
+    println!("---------------------After Encryption:---------------------\n");
+    println!(
+      "actual ciphertext: {:x}",
+      u128::from_be_bytes(act_ciphertext)
+    );
+    println!(
+      "expected ciphertext: {:x}\n",
+      u128::from_be_bytes(exp_ciphertext)
+    );
+    assert_eq!(exp_ciphertext, act_ciphertext);
+
+    let act_plaintext = aes_128(key, act_ciphertext, false);
+
+    println!("---------------------After Decryption:---------------------\n");
+    println!("actual plaintext: {:x}", u128::from_be_bytes(act_plaintext));
+    println!("expected plaintext: {:x}", u128::from_be_bytes(plaintext));
+    assert_eq!(plaintext, act_plaintext);
   }
-  print!("\n");
 
-  let act_ciphertext = aes_128(key, plaintext, true);
+  #[test]
+  // Example from: https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/AES_Core192.pdf
+  fn test_aes_192() {
+    println!("############################\n192b Key Cipher Test\n############################");
+    const KEYLEN: usize = 24;
+    let key: [u8; KEYLEN] = [
+      0x8e, 0x73, 0xb0, 0xf7, 0xda, 0x0e, 0x64, 0x52, 0xc8, 0x10, 0xf3, 0x2b, 0x80, 0x90, 0x79,
+      0xe5, 0x62, 0xf8, 0xea, 0xd2, 0x52, 0x2c, 0x6b, 0x7b,
+    ];
+    let plaintext: [u8; BLOCKLEN] = 0x6BC1BEE2_2E409F96_E93D7E11_7393172A_u128.to_be_bytes();
+    let exp_ciphertext: [u8; BLOCKLEN] = 0xBD334F1D_6E45F25F_F712A214_571FA5CC_u128.to_be_bytes();
 
-  println!("---------------------After Encryption:---------------------\n");
-  println!("actual ciphertext: {:x}", act_ciphertext);
-  println!("expected ciphertext: {:x}\n", exp_ciphertext);
-  assert_eq!(exp_ciphertext, act_ciphertext);
+    println!("---------------------Before Encryption:---------------------\n");
+    println!("plaintext: {:x}", u128::from_be_bytes(plaintext));
+    print!("key: ");
+    for byte_idx in 0..KEYLEN {
+      print!("{:x}", key[byte_idx]);
+    }
+    print!("\n");
 
-  let act_plaintext = aes_128(key, act_ciphertext, false);
+    let act_ciphertext = aes_192(key, plaintext, true);
 
-  println!("---------------------After Decryption:---------------------\n");
-  println!("actual plaintext: {:x}", act_plaintext);
-  println!("expected plaintext: {:x}", plaintext);
-  assert_eq!(plaintext, act_plaintext);
-}
+    println!("---------------------After Encryption:---------------------\n");
+    println!(
+      "actual ciphertext: {:x}",
+      u128::from_be_bytes(act_ciphertext)
+    );
+    println!(
+      "expected ciphertext: {:x}\n",
+      u128::from_be_bytes(exp_ciphertext)
+    );
+    assert_eq!(exp_ciphertext, act_ciphertext);
 
-#[test]
-// Example from: https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/AES_Core192.pdf
-fn test_aes_192() {
-  println!("############################\n192b Key Cipher Test\n############################");
-  const KEYLEN: usize = 24;
-  let key: [u8; KEYLEN] = [
-    0x8e, 0x73, 0xb0, 0xf7, 0xda, 0x0e, 0x64, 0x52, 0xc8, 0x10, 0xf3, 0x2b, 0x80, 0x90, 0x79, 0xe5,
-    0x62, 0xf8, 0xea, 0xd2, 0x52, 0x2c, 0x6b, 0x7b,
-  ];
-  let plaintext: u128 = 0x6BC1BEE2_2E409F96_E93D7E11_7393172A;
-  let exp_ciphertext: u128 = 0xBD334F1D_6E45F25F_F712A214_571FA5CC;
+    let act_plaintext = aes_192(key, act_ciphertext, false);
 
-  println!("---------------------Before Encryption:---------------------\n");
-  println!("plaintext: {:x}", plaintext);
-  print!("key: ");
-  for byte_idx in 0..KEYLEN {
-    print!("{:x}", key[byte_idx]);
+    println!("---------------------After Decryption:---------------------\n");
+    println!("actual plaintext: {:x}", u128::from_be_bytes(act_plaintext));
+    println!("expected plaintext: {:x}", u128::from_be_bytes(plaintext));
+    assert_eq!(plaintext, act_plaintext);
   }
-  print!("\n");
 
-  let act_ciphertext = aes_192(key, plaintext, true);
+  #[test]
+  // Example from: https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/AES_Core256.pdf
+  fn test_aes_256() {
+    println!("############################\n256b Key Cipher Test\n############################");
+    const KEYLEN: usize = 32;
+    let key: [u8; KEYLEN] = [
+      0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77,
+      0x81, 0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14,
+      0xdf, 0xf4,
+    ];
+    let plaintext: [u8; BLOCKLEN] = 0x6BC1BEE2_2E409F96_E93D7E11_7393172A_u128.to_be_bytes();
+    let exp_ciphertext: [u8; BLOCKLEN] = 0xF3EED1BD_B5D2A03C_064B5A7E_3DB181F8_u128.to_be_bytes();
 
-  println!("---------------------After Encryption:---------------------\n");
-  println!("actual ciphertext: {:x}", act_ciphertext);
-  println!("expected ciphertext: {:x}\n", exp_ciphertext);
-  assert_eq!(exp_ciphertext, act_ciphertext);
+    println!("---------------------Before Encryption:---------------------\n");
+    println!("plaintext: {:x}", u128::from_be_bytes(plaintext));
+    print!("key: ");
+    for byte_idx in 0..KEYLEN {
+      print!("{:x}", key[byte_idx]);
+    }
+    print!("\n");
 
-  let act_plaintext = aes_192(key, act_ciphertext, false);
+    let act_ciphertext = aes_256(key, plaintext, true);
 
-  println!("---------------------After Decryption:---------------------\n");
-  println!("actual plaintext: {:x}", act_plaintext);
-  println!("expected plaintext: {:x}", plaintext);
-  assert_eq!(plaintext, act_plaintext);
-}
+    println!("---------------------After Encryption:---------------------\n");
+    println!(
+      "actual ciphertext: {:x}",
+      u128::from_be_bytes(act_ciphertext)
+    );
+    println!(
+      "expected ciphertext: {:x}\n",
+      u128::from_be_bytes(exp_ciphertext)
+    );
+    assert_eq!(exp_ciphertext, act_ciphertext);
 
-#[test]
-// Example from: https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/AES_Core256.pdf
-fn test_aes_256() {
-  println!("############################\n256b Key Cipher Test\n############################");
-  const KEYLEN: usize = 32;
-  let key: [u8; KEYLEN] = [
-    0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
-    0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4,
-  ];
-  let plaintext: u128 = 0x6BC1BEE2_2E409F96_E93D7E11_7393172A;
-  let exp_ciphertext: u128 = 0xF3EED1BD_B5D2A03C_064B5A7E_3DB181F8;
+    let act_plaintext = aes_256(key, act_ciphertext, false);
 
-  println!("---------------------Before Encryption:---------------------\n");
-  println!("plaintext: {:x}", plaintext);
-  print!("key: ");
-  for byte_idx in 0..KEYLEN {
-    print!("{:x}", key[byte_idx]);
+    println!("---------------------After Decryption:---------------------\n");
+    println!("actual plaintext: {:x}", u128::from_be_bytes(act_plaintext));
+    println!("expected plaintext: {:x}", u128::from_be_bytes(plaintext));
+    assert_eq!(plaintext, act_plaintext);
   }
-  print!("\n");
-
-  let act_ciphertext = aes_256(key, plaintext, true);
-
-  println!("---------------------After Encryption:---------------------\n");
-  println!("actual ciphertext: {:x}", act_ciphertext);
-  println!("expected ciphertext: {:x}\n", exp_ciphertext);
-  assert_eq!(exp_ciphertext, act_ciphertext);
-
-  let act_plaintext = aes_256(key, act_ciphertext, false);
-
-  println!("---------------------After Decryption:---------------------\n");
-  println!("actual plaintext: {:x}", act_plaintext);
-  println!("expected plaintext: {:x}", plaintext);
-  assert_eq!(plaintext, act_plaintext);
 }

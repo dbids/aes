@@ -17,10 +17,11 @@ fn aes_128_comparison_test() {
   // Run the test for AES128
   for _i in 0..1000 {
     // Generate plaintext
-    let plaintext: u128 = rng.random();
+    let mut plaintext: [u8; 16] = [0u8; 16];
+    rng.fill(&mut plaintext);
 
     // Generate ciphertext from AES library
-    let mut expected_ciphertext = Array::from(plaintext.to_be_bytes().clone());
+    let mut expected_ciphertext = Array::from(plaintext.clone());
     cipher_128.encrypt_block(&mut expected_ciphertext);
 
     // Generate ciphertext from my AES implementation
@@ -32,7 +33,7 @@ fn aes_128_comparison_test() {
       .try_into()
       .expect("Expected ciphertext should be 16 bytes long");
     assert_eq!(
-      u128::from_be_bytes(expected_ciphertext),
+      expected_ciphertext,
       my_ciphertext,
       "AES-128 encryption failed."
     );
@@ -64,10 +65,11 @@ fn aes_192_comparison_test() {
   // Run the test for AES-192
   for _i in 0..1000 {
     // Generate plaintext
-    let plaintext: u128 = rng.random();
+    let mut plaintext: [u8; 16] = [0u8; 16];
+    rng.fill(&mut plaintext);
 
     // Generate ciphertext from AES library
-    let mut expected_ciphertext = Array::from(plaintext.to_be_bytes().clone());
+    let mut expected_ciphertext = Array::from(plaintext.clone());
     cipher_192.encrypt_block(&mut expected_ciphertext);
 
     // Generate ciphertext from my AES implementation
@@ -79,7 +81,7 @@ fn aes_192_comparison_test() {
       .try_into()
       .expect("Expected ciphertext should be 16 bytes long");
     assert_eq!(
-      u128::from_be_bytes(expected_ciphertext),
+      expected_ciphertext,
       my_ciphertext,
       "AES-192 encryption failed."
     );
@@ -112,10 +114,11 @@ fn aes_256_comparison_test() {
   // Run the test for AES-256
   for _i in 0..1000 {
     // Generate plaintext
-    let plaintext: u128 = rng.random();
+    let mut plaintext: [u8; 16] = [0u8; 16];
+    rng.fill(&mut plaintext);
 
     // Generate ciphertext from AES library
-    let mut expected_ciphertext = Array::from(plaintext.to_be_bytes().clone());
+    let mut expected_ciphertext = Array::from(plaintext.clone());
     cipher_256.encrypt_block(&mut expected_ciphertext);
 
     // Generate ciphertext from my AES implementation
@@ -127,7 +130,7 @@ fn aes_256_comparison_test() {
       .try_into()
       .expect("Expected ciphertext should be 16 bytes long");
     assert_eq!(
-      u128::from_be_bytes(expected_ciphertext),
+      expected_ciphertext,
       my_ciphertext,
       "AES-256 encryption failed."
     );
