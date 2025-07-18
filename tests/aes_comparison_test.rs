@@ -33,8 +33,7 @@ fn aes_128_comparison_test() {
       .try_into()
       .expect("Expected ciphertext should be 16 bytes long");
     assert_eq!(
-      expected_ciphertext,
-      my_ciphertext,
+      expected_ciphertext, my_ciphertext,
       "AES-128 encryption failed."
     );
 
@@ -81,8 +80,7 @@ fn aes_192_comparison_test() {
       .try_into()
       .expect("Expected ciphertext should be 16 bytes long");
     assert_eq!(
-      expected_ciphertext,
-      my_ciphertext,
+      expected_ciphertext, my_ciphertext,
       "AES-192 encryption failed."
     );
 
@@ -130,8 +128,7 @@ fn aes_256_comparison_test() {
       .try_into()
       .expect("Expected ciphertext should be 16 bytes long");
     assert_eq!(
-      expected_ciphertext,
-      my_ciphertext,
+      expected_ciphertext, my_ciphertext,
       "AES-256 encryption failed."
     );
 

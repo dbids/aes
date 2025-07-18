@@ -30,10 +30,10 @@ pub fn aes_cbc(key: &[u8], data: &mut [u8], iv: u128, is_encrypt: bool) {
   );
 
   // Create copy of data with IV prepended
-    let mut iv_copy: [u8; BLOCKLEN] = iv.to_be_bytes();
-    let mut xor_copy: Vec<u8> = Vec::with_capacity(data.len());
-    xor_copy.extend_from_slice(&iv.to_be_bytes());
-    xor_copy.extend_from_slice(data.split_at(data.len() - BLOCKLEN).0);
+  let mut iv_copy: [u8; BLOCKLEN] = iv.to_be_bytes();
+  let mut xor_copy: Vec<u8> = Vec::with_capacity(data.len());
+  xor_copy.extend_from_slice(&iv.to_be_bytes());
+  xor_copy.extend_from_slice(data.split_at(data.len() - BLOCKLEN).0);
 
   for block in data.chunks_mut(BLOCKLEN) {
     // For encryption perform XOR
