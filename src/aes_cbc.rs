@@ -85,7 +85,8 @@ pub fn aes_cbc(key: &[u8], data: &mut [u8], iv: u128, is_encrypt: bool) {
 mod tests {
   use super::*;
 
-  /// Example from: SP800-38A, Appendix F
+  /// Examples from: SP800-38A, Appendix F
+
   #[test]
   fn test_aes_128_cbc() {
     let key: [u8; 16] = 0x2b7e151628aed2a6abf7158809cf4f3c_u128.to_be_bytes();
@@ -160,6 +161,7 @@ mod tests {
     println!("---------------------Before Encryption:---------------------\n");
     println!("plaintext: {:x?}", plaintext);
     println!("key: {:x?}", key);
+    println!("iv: {:x?}\n", iv);
 
     let mut act_ciphertext: [u8; 64] = plaintext;
     aes_cbc(key, &mut act_ciphertext, iv, true);
