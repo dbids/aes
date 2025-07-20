@@ -10,3 +10,6 @@ pub mod aes_ecb;
 
 // AES-CBC Functions
 pub mod aes_cbc;
+
+// AES-CTR Functions
+pub mod aes_ctr;
