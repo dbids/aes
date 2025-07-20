@@ -30,17 +30,20 @@ pub fn aes_cbc(key: &[u8], data: &mut [u8], iv: u128, is_encrypt: bool) {
   );
 
   // Create copy of data with IV prepended
-  let mut iv_copy: [u8; BLOCKLEN] = iv.to_be_bytes();
-  let mut xor_copy: Vec<u8> = Vec::with_capacity(data.len());
-  xor_copy.extend_from_slice(&iv.to_be_bytes());
-  xor_copy.extend_from_slice(data.split_at(data.len() - BLOCKLEN).0);
+  let mut in_copy: [u8; BLOCKLEN] = iv.to_be_bytes();
+  let mut in_copy_copy: [u8; BLOCKLEN] = [0; BLOCKLEN];
 
   for block in data.chunks_mut(BLOCKLEN) {
     // For encryption perform XOR
     if is_encrypt {
       block.iter_mut().enumerate().for_each(|(i, byte)| {
-        *byte ^= iv_copy[i];
+        *byte ^= in_copy[i];
       });
+    }
+    // For decryption create copies of ciphertext blocks
+    else {
+      in_copy_copy.copy_from_slice(&in_copy);
+      in_copy.copy_from_slice(&block);
     }
 
     // Perform forward/inverse cipher
@@ -66,15 +69,14 @@ pub fn aes_cbc(key: &[u8], data: &mut [u8], iv: u128, is_encrypt: bool) {
 
     // For encryption, copy the current block to the xor_copy for the next iteration
     if is_encrypt {
-      iv_copy.copy_from_slice(block);
+      in_copy.copy_from_slice(block);
     }
-  }
-
-  // For decryption perform XOR
-  if !is_encrypt {
-    data.iter_mut().enumerate().for_each(|(i, byte)| {
-      *byte ^= xor_copy[i];
-    });
+    // For decryption perform XOR
+    else {
+      block.iter_mut().enumerate().for_each(|(i, byte)| {
+        *byte ^= in_copy_copy[i];
+      });
+    }
   }
 }
 
